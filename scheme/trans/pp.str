@@ -1,0 +1,49 @@
+module pp
+
+imports
+
+  libstratego-gpp
+  libspoofax/sdf/pp
+  libspoofax/editor/refactoring/-
+  pp/scheme-parenthesize
+  pp/scheme-pp
+
+rules
+
+  editor-format:
+    (node, _, ast, path, project-path) -> (filename, result)
+    with
+      ext      := <get-extension> path
+    ; filename := <guarantee-extension(|$[pp.[ext]])> path
+    ; result   := <pp-debug> node
+
+rules
+  
+  pp-scheme-string =
+    parenthesize-scheme
+    ; prettyprint-scheme-start-symbols
+    ; !V([], <id>)
+    ; box2text-string(|120)
+      
+  pp-partial-scheme-string =
+    parenthesize-scheme
+    ; prettyprint-scheme
+    ; !V([], <id>)
+    ; box2text-string(|120)
+    
+  pp-partial-scheme-string(|sort) =
+    parenthesize-scheme
+    ; prettyprint-scheme(|sort)
+    ; !V([], <id>)
+    ; box2text-string(|120)  
+      
+  pp-debug :
+    ast -> result
+    with
+       result := <pp-scheme-string> ast
+    <+ <bottomup(try(not(is-string); not(is-list); not(pp-scheme-string); debug(!"cannot pp ")))> ast
+    ;  result := ""
+
+rules
+  
+  construct-textual-change = construct-textual-change(pp-partial-scheme-string, parenthesize, override-reconstruction, resugar)

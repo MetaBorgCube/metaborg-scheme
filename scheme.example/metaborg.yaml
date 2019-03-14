@@ -1,0 +1,13 @@
+---
+id: org.example:scheme.example:0.1.0-SNAPSHOT
+name: scheme
+dependencies:
+  compile:
+  - org.example:scheme:0.1.0-SNAPSHOT
+debug:
+  typesmart: false
+runtime:
+  nabl2:
+    debug: analysis files
+build:
+  useBuildSystemSpec: true
