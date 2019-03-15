@@ -1,0 +1,9 @@
+module desugar
+
+imports
+  signatures/scheme-sig
+  
+imports
+
+rules
+	desugar: e -> e

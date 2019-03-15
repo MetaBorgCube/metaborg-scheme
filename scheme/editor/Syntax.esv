@@ -8,18 +8,19 @@ imports
 language
 
   table         : target/metaborg/sdf.tbl
-  start symbols : Start
+  start symbols : Program
 
-  line comment  : "//"
-  block comment : "/*" * "*/"
+  line comment  : ";"
+  block comment : "|#" * "#|"
   fences        : [ ] ( ) { }
 
 menus
   
   menu: "Syntax" (openeditor)
     
-    action: "Format"          = editor-format (source)
-    action: "Show parsed AST" = debug-show-aterm (source)
+    action: "Format"             = editor-format (source)
+    action: "Show parsed AST"    = debug-show-aterm (source)
+    action: "Show desugared AST" = debug-show-desugared-aterm (source)
 
 views
   

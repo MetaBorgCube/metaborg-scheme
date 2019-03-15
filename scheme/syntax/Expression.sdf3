@@ -1,0 +1,78 @@
+module Expression
+
+imports
+
+  Common
+  
+context-free start-symbols
+  
+  Exp
+
+context-free priorities
+
+context-free syntax
+  	Exp.BinOp = <(<BinOp> <Exp> <Exp>)>
+  	Exp.UnOp  = <(<UnOp> <Exp>)>
+  	Exp.Define = <(define (<Bind*>) <Exp>)>
+  	Exp.Lambda = <(lambda (<ID*>) <Exp+>)>
+  	Exp.DefineSingle = <(define <ID> <Exp>)>
+  	Exp.Quote = <'<Exp>>
+  	Exp.NewList = <(list <Exp>)>
+  	Exp.Callcc  = <(call-cc <Exp>)>
+  	Exp.Set  = <(set! <Exp> <Exp>)>
+  	
+  	Exp.If = <(if <Exp>
+  	<Exp>)>
+  	
+  	Exp.IfElse = <(if <Exp>
+  	<Exp>
+  	<Exp>)>
+  	
+  	Exp.Let = <(let (<Bind*>)
+  	<Exp>)>
+  	Exp.LetStar = <(let* (<Bind*>)
+  	<Exp>)>
+	
+	Exp.List = <(<Exp*>)>
+	
+	Bind.Bind = <(<ID> <Exp>)>
+	
+	UnOp.Abs  = "abs"
+	UnOp.Sqrt = "sqrt"
+	UnOp.Not  = "not"
+	
+	UnOp.Len  = "length"
+	UnOp.Car  = "car"
+	UnOp.Cdr  = "cdr"
+	
+	UnOp.IsNum    = "number?"
+	UnOp.IsInt    = "integer?"
+	UnOp.IsPair   = "pair?"
+	UnOp.IsSym    = "symbol?"
+	UnOp.IsBool   = "boolean?"
+	UnOp.IsString = "string?"
+	UnOp.Null     = "string?"
+		
+	BinOp.And  = "and"
+	BinOp.Or   = "or"
+	BinOp.Con  = "cons"
+	
+	BinOp.Eq  = "="
+	BinOp.Lte = "<="
+	BinOp.Gte = ">="
+	BinOp.Lt  = "<"
+	BinOp.Gt  = ">"
+	
+	BinOp.Add = "+"
+	BinOp.Sub = "-"
+	BinOp.Div = "/"
+	BinOp.Mul = "*"
+		
+	
+	Exp.Num = NUM
+	Exp.Ref = ID
+	Exp.Bool = BOOL
+
+	
+	
+	

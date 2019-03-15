@@ -1,39 +1,103 @@
 module Common
-
+	
 lexical syntax
+	BOOL           = "#t"
+	BOOL           = "#f"
+	
+	CHAR           = "#\\" ~[]
+	CHAR           = "#\\space"
+	CHAR           = "#\\newline"
+	
+	STRING         = "\"" StringChar* "\"" 
+	StringChar     = ~[\"\\] 
+	
+	StringChar     = "\\\"" 
+	StringChar     = BackSlashChar 
+	BackSlashChar  = "\\" 
 
-  ID             = [a-zA-Z] [a-zA-Z0-9]* 
-  INT            = "-"? [0-9]+ 
-  STRING         = "\"" StringChar* "\"" 
-  StringChar     = ~[\"\n] 
-  StringChar     = "\\\"" 
-  StringChar     = BackSlashChar 
-  BackSlashChar  = "\\" 
-  LAYOUT         = [\ \t\n\r] 
-  CommentChar    = [\*] 
-  LAYOUT         = "/*" InsideComment* "*/" 
-  InsideComment  = ~[\*] 
-  InsideComment  = CommentChar 
-  LAYOUT         = "//" ~[\n\r]* NewLineEOF 
-  NewLineEOF     = [\n\r] 
-  NewLineEOF     = EOF 
-  EOF            =  
+	NUM            = NUM2
+	NUM            = NUM8
+	NUM            = NUM10
+	NUM            = NUM16
+	
+	NUM2           = "#b" [\+\-]? [0-1]+
+	NUM8           = "#o" [\+\-]? [0-7]+
+	NUM10          = "#d"? [\+\-]? [0-9]+
+	NUM16          = "#x" [\+\-]? [0-9a-f]+ 
+	
+	LAYOUT         = [\ \t\n\r] 
+	CommentChar    = [\#] 
+	LAYOUT         = "|#" InsideComment* "#|" 
+	InsideComment  = ~[\#] 
+	InsideComment  = CommentChar 
+	LAYOUT         = ";" ~[\n\r]* NewLineEOF 
+	NewLineEOF     = [\n\r] 
+	NewLineEOF     = EOF 
+	EOF            =  
 
+
+	ID             = [a-z\_] [a-z0-9\_\+\-\.\@]*
+	
+	ID   = "else"              {reject}
+	ID   = "=>"                {reject}
+	ID   = "define"            {reject}
+	ID   = "unquote"           {reject}
+	ID   = "unquote-splicing"  {reject}
+	ID   = "quote"             {reject}
+	ID   = "lambda"            {reject}
+	ID   = "if"                {reject}
+	ID   = "set!"              {reject}
+	ID   = "begin"             {reject}
+	ID   = "cond"              {reject}
+	ID   = "and"               {reject}
+	ID   = "or"                {reject}
+	ID   = "case"              {reject}
+	ID   = "let"               {reject}
+	ID   = "let*"              {reject}
+	ID   = "letrec"            {reject}
+	ID   = "do"                {reject}
+	ID   = "delay"             {reject}
+	ID   = "quasiquote"        {reject}
+	ID   = "call-cc"           {reject}
+ 
+	AbbPrefix = "'"
+	AbbPrefix = "`"
+	AbbPrefix = ","
+	AbbPrefix = ",@"
+	
+context-free syntax
+	Datum.Bool = BOOL
+	Datum.Num = NUM
+	Datum.Char = CHAR
+	Datum.String = STRING
+	Datum.Symbol = ID
+	
+	Datum = List
+	Datum.Vector = <#(<Datum*>)>
+	
+	List.List = <(<Datum*>)>
+	List.List = <(<Datum+>.<Datum>)>
+	List.AbbList = <<AbbPrefix> <Datum>>
+	
 lexical restrictions
 
   // Ensure greedy matching for lexicals
   
-  CommentChar   -/- [\/]
-  INT           -/- [0-9]
-  ID            -/- [a-zA-Z0-9\_]
+    CommentChar   -/- [\|]
+	NUM2          -/- [0-1]
+	NUM8          -/- [0-8]
+	NUM10         -/- [0-9]
+	NUM16         -/- [0-9a-f]
+
+	ID            -/- [0-9a-z\!\$\%\&\*\/\:\<\=\>\?\^\_\~\+\-\.\@]
   
   // EOF may not be followed by any char
   
-  EOF           -/- ~[]
+    EOF           -/- ~[]
   
   // Backslash chars in strings may not be followed by " 
   
-  BackSlashChar -/- [\"]
+    BackSlashChar -/- [\"]
 
 context-free restrictions
 

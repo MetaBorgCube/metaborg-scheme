@@ -8,6 +8,7 @@ dependencies:
   - org.metaborg:org.metaborg.meta.nabl2.lang:${metaborgVersion}
   - org.metaborg:dynsem:${metaborgVersion}
   source:
+  - org.example:framevm:0.1.0-SNAPSHOT
   - org.metaborg:meta.lib.spoofax:${metaborgVersion}
   - org.metaborg:org.metaborg.meta.nabl2.shared:${metaborgVersion}
   - org.metaborg:org.metaborg.meta.nabl2.runtime:${metaborgVersion}
@@ -20,7 +21,7 @@ debug:
 language:
   sdf:
     pretty-print: scheme
-    sdf2table: c
+    sdf2table: java
     placeholder:
       prefix: "$"
   stratego:

@@ -3,11 +3,24 @@ module scheme
 imports
   
   Common
+  Expression
 
 context-free start-symbols
   
-  Start
+  Program
 
 context-free syntax
   
-  Start.Empty = <>
+  Program.Program = <<Exp*>>
+//  Line = Definition
+////  Line = <(define-syntax <ID> <TransormSpec>)>
+//  Line.Begin = <(begin <Line+>)>
+//  
+//  
+//  Definition.Define = <(define <Var> <Exp>)>
+//  Definition.Define = <(define (<Var> <DefFormals>) <Body>)>
+//  Definition.Begin = <(begin <Definition*>)>
+//  
+//  DefFormals.Vars = <<Var*>>
+//  DefFormals.Comp = <<Var*>.<Var>>
+ 

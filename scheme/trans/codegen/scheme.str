@@ -1,0 +1,24 @@
+module scheme
+
+imports
+  signatures/framevm-sig
+  fvm-util
+  
+imports
+  signatures/scheme-sig
+  signatures/Expression-sig
+  codegen/-
+
+rules
+	compile-to-fvm: Program(exprs) -> fvm_program
+	  where
+	  	linear_instr := <map(compile-topexp)> exprs;
+	  	fvm_program := <framevm-from-flat> <concat> [<concat> linear_instr, [FVM_IPush("0"), FVM_Return()]]
+	  	
+	  	
+	compile-topexp: DefineSingle(name, val) -> [FVM_Set(FVM_Path([FVM_Slot("0")])) | <compile-exp> val]
+	
+	// Print results of the rest of the expressions
+	compile-topexp: e -> <concat> [<compile-exp> e, [FVM_Print()]]
+	
+	compile-exp: e -> [FVM_IPush("0")]

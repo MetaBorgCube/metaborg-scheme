@@ -4,8 +4,8 @@ imports
   
   nabl2/api
   nabl2/runtime
-
-  static-semantics
+  
+  analysis/-
 
   pp
 
