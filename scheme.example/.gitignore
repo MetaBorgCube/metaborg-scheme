@@ -13,3 +13,9 @@
 *.name-resolution
 *.unifier
 *.symbolic
+
+*.aterm
+*.value
+*.pp.scm
+*.fvm*
+*.dot
