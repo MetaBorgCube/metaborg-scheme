@@ -64,21 +64,7 @@ lexical syntax
 	AbbPrefix = "`"
 	AbbPrefix = ","
 	AbbPrefix = ",@"
-	
-context-free syntax
-	Datum.Bool = BOOL
-	Datum.Num = NUM
-	Datum.Char = CHAR
-	Datum.String = STRING
-	Datum.Symbol = ID
-	
-	Datum = List
-	Datum.Vector = <#(<Datum*>)>
-	
-	List.List = <(<Datum*>)>
-	List.List = <(<Datum+>.<Datum>)>
-	List.AbbList = <<AbbPrefix> <Datum>>
-	
+		
 lexical restrictions
 
   // Ensure greedy matching for lexicals

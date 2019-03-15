@@ -2,8 +2,55 @@ module desugar
 
 imports
   signatures/scheme-sig
+  signatures/Expression-sig
   
-imports
-
 rules
-	desugar: e -> e
+	desugar = desugar-bind-all
+	
+	desugar-bind-all: Program(body) -> Program(body_out)
+	  where
+	  	(body_out, _) := <foldl(desugar-bind-top)> (body, ([], 0))
+	  	
+	desugar-bind-top: (DefineSingle(name, val), (body, idx)) -> (<concat>[body, [DefineSingle(Bind(name, idx), d_val)]], d_idx)
+	  where
+	  	(d_val, d_idx) := <desugar-bind> (val, <inc> idx)
+	  	
+	desugar-bind-top: (exp, (body, idx)) -> (<concat>[body, [d_exp]], d_idx)
+	  where
+	  	(d_exp, d_idx) := <desugar-bind> (exp, idx)
+	  	
+	desugar-bind: (BinOp(op, l, r), idx) -> (BinOp(op, d_l, d_r), r_idx)
+	  where
+	  	(d_l, l_idx) := <desugar-bind> (l, idx);
+	  	(d_r, r_idx) := <desugar-bind> (r, idx)
+	  	
+	desugar-bind: (Lambda(args, body), idx) -> (Lambda(binds, d_body), idx)
+	  where
+	  	(binds, body_idx) := <foldl(desugar-bind-args)> (args, ([], 0));
+	  	(d_body, _) := <desugar-bind-seq> (body, body_idx)
+	
+	desugar-bind: (List(items), idx) -> (List(d_items), d_idx)
+	  where
+	  	(d_items, d_idx) := <desugar-bind-seq> (items, idx)
+	  	
+	desugar-bind: (Set(Ref(name), val), idx) -> (Set(Ref(name), d_val), d_idx)
+	  where
+	  	(d_val, d_idx) := <desugar-bind> (val, <inc> idx)
+		  	
+	desugar-bind: (Callcc(exp), idx)  -> (Callcc(d_exp), d_idx)
+	  where
+	  	(d_exp, d_idx) := <desugar-bind> (exp, idx)
+	  	
+	  	
+	desugar-bind: (Num(n), idx)  -> (Num(n), idx)
+	desugar-bind: (Bool(n), idx) -> (Bool(n), idx)
+	desugar-bind: (Ref(n), idx) -> (Ref(n), idx)
+	
+//	desugar-bind: (e, idx) -> (<debug> e, idx)
+	
+	desugar-bind-args: (name, (args, idx)) -> (<concat> [args, [Bind(name, idx)]], <inc> idx)
+	desugar-bind-seq: (body, idx) -> <foldl(desugar-bind-seq)> (body, ([], idx))
+	desugar-bind-seq: (exp, (list, idx)) -> (<concat> [list, [d_exp]], d_idx)
+      where
+	  	(d_exp, d_idx) := <desugar-bind> (exp, idx)
+	  	

@@ -27,4 +27,3 @@ rules
     with
       filename := <guarantee-extension(|"fvm")> path
     ; result   := <pp-framevm> <compile-to-fvm> <desugar> node
-//    ; result   := <compile-to-fvm> <desugar> node

@@ -40,15 +40,19 @@ rules
   	Map1(Bind) [[binds ^(let)]],
   	Map1(Expr) [[body  ^(let)]].
   	
-  Bind [[var ^(s) ]] :=
-  	Var{var} <- s.
+  Bind [[Bind(name, idx) ^(s) ]] :=
+  	Var{name} <- s,
+  	Var{name}.index := idx,
+	distinct/name W(s)/Var | error $[Redefinition of variable [name]].
   	
   Expr [[Ref(name) ^(s)]] :=
   	Var{name} -> s,
   	Var{name} |-> d | error $[Variable [name] is not defined] @name.
   	
-  Expr [[DefineSingle(var, val) ^(s) ]] :=
-  	Var{var} <- s.
+  Expr [[DefineSingle(Bind(var, idx), val) ^(s) ]] :=
+  	Var{var} <- s,
+  	Var{var}.index := idx,
+	distinct/name W(s)/Var | error $[Redefinition of variable [var]].
   	
   Expr [[List(exps) ^(s) ]] :=
     Map1(Expr)[[exps ^(s)]].

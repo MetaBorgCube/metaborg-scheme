@@ -7,6 +7,6 @@ menus
   
   menu: "Compile" (openeditor)
     
-    action: "Compile"          = compile (source)
-    action: "Compile and run"  = compile-run (source)
+    action: "Compile"          = compile
+    action: "Compile and run"  = compile-run
 

@@ -1,17 +1,19 @@
 module analysis
 
 imports
+  analysis/-
+  reference/src-gen/nabl2/analysis/-
   
   nabl2/api
   nabl2/runtime
   
-  analysis/-
 
   pp
+  desugar/-
 
 rules // Analysis
 
-  editor-analyze = nabl2-analyze(id)
+  editor-analyze = nabl2-analyze(desugar)
 
 rules // Debugging
   

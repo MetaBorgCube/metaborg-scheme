@@ -3,6 +3,7 @@ module scheme
 imports
   
   completion/completion
+  desugar/-
   pp
   outline
   analysis

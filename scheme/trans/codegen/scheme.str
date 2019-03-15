@@ -7,6 +7,7 @@ imports
 imports
   signatures/scheme-sig
   signatures/Expression-sig
+  
   codegen/-
 
 rules
@@ -16,9 +17,28 @@ rules
 	  	fvm_program := <framevm-from-flat> <concat> [<concat> linear_instr, [FVM_IPush("0"), FVM_Return()]]
 	  	
 	  	
-	compile-topexp: DefineSingle(name, val) -> [FVM_Set(FVM_Path([FVM_Slot("0")])) | <compile-exp> val]
+	compile-topexp: DefineSingle(Bind(name, idx), val) -> <concat> [val_instrs, [set_instrs]]
+	  where
+	  	val_instrs := <compile-exp> val;
+	  	set_instrs := FVM_Set(FVM_Path([FVM_Slot(<int-to-string> idx)]))
 	
 	// Print results of the rest of the expressions
 	compile-topexp: e -> <concat> [<compile-exp> e, [FVM_Print()]]
 	
-	compile-exp: e -> [FVM_IPush("0")]
+	compile-exp: BinOp(Add(), e1, e2) -> <concat> [e1_instrs, e2_instrs, [FVM_IAdd()]]
+	  where
+	  	e1_instrs := <compile-exp> e1;
+	  	e2_instrs := <compile-exp> e2
+	
+	compile-exp: Ref(name) -> [FVM_Get(fvm_path)]
+	  where
+		fvm_path     := <framevm-path-from-nabl2> (name, "Var", "index")
+	
+	compile-exp: Bool("#f") -> [FVM_IPush("0")]
+	compile-exp: Bool("#t") -> [FVM_IPush("1")]
+	compile-exp: Num(val)   -> [FVM_IPush(val)]
+	
+	
+	
+	
+//	  	
