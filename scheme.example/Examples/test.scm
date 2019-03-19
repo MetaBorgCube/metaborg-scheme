@@ -1,7 +1,0 @@
-;(define add-2 #f)
-;(+ 2 (call-cc (lambda (cont) (set! add-2 cont) 3)))
-;(add-2 10)
-(define aa 12)
-(define bb 13)
-(define cc 14)
-(+ cc (+ aa bb))
