@@ -43,11 +43,19 @@ rules
 	compile-func: (Lambda(_, body), name) -> <concat> [build_cont, jump, [FVM_Label(name) | body_stmts], cont]
 	  where
 	  	build_cont := [FVM_New(), FVM_Dup(), FVM_Link(FVM_Self(), "P"), FVM_ContNewR(FVM_Label(name))];
-	  	body_stmts := <concat> [<concat> <map(compile-exp)> body, [FVM_Return()]];
+	  	body_stmts := <concat> [<concat> <seq-pop-all><map(compile-exp)> body, [FVM_Return()]];
 	  	cont_name := $[CONT_[<next-counter> "cont"]];
 	  	jump := [FVM_Jump(FVM_Label(cont_name))];
 	  	cont := [FVM_Label(cont_name)]
 	  	
+	seq-pop-all: sequence -> <concat> [init_pop, [last]]
+	  where
+	  	(init, last) := <split-init-last> sequence;
+	  	init_pop := <map(seq-pop)> init
+	  	
+	seq-pop: e -> <concat> [e, [FVM_Pop()]]
+	  	
+
 	compile-args: args -> <concat> <map-with-index(compile-arg)> args
 	compile-arg: (idx, exp) -> <concat> [[FVM_Dup()], exp_instr , set_instr]
 	  where
@@ -65,7 +73,7 @@ rules
 //	  		func_body := <compile-func> (func, func_name);
 //	  		cont_pre := [FVM_Copy(), FVM_ContNewR(FVM_Label(cont_name)), FVM_Call(FVM_Label(cont_name))];
 //	  		cont := [FVM_Label(cont_name), FVM_Get(FVM_Path([FVM_SlotR()]))]	  		
-//	  	
+
 	compile-exp: Ref(name) -> [FVM_Get(fvm_path)]
 	  where
 		fvm_path := <framevm-path-from-nabl2> (name, "Var", "index")

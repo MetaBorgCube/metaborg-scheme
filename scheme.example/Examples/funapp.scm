@@ -1,1 +1,1 @@
-((lambda (x y) (+ x y)) 2 3)	; 5
+((lambda (x y) 12 (+ x y)) 2 3)	; 5
