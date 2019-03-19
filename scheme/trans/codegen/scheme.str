@@ -13,12 +13,12 @@ imports
 rules
 	compile-to-fvm: Program(exprs) -> <framevm-from-flat> <concat> [fvm_init, <concat> linear_instr, fvm_exit]
 	  where
-	  	linear_instr := <map(compile-topexp)> exprs;
 	  	_ := <new-counter> "line"; 
 	  	_ := <new-counter> "cont"; 
 	  	_ := <new-counter> "lamb"; 
 	  	_ := <new-counter> "prelamb"; 
 	  	line_lbl := $[LINE_[<next-counter> "line"]];
+	  	linear_instr := <map(compile-topexp)> exprs;
 	  	fvm_init := [FVM_ContNew(FVM_Label(line_lbl)), FVM_Dup(), FVM_Set(FVM_Path([FVM_Cont("n")])), FVM_ContCall(), FVM_Label(line_lbl)];
 	  	fvm_exit := [FVM_IPush("0"), FVM_Return()] 
 	
