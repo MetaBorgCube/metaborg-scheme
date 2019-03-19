@@ -18,7 +18,7 @@ context-free syntax
   	Exp.DefineSingle = <(define <ID> <Exp>)>
   	Exp.Quote = <'<Exp>>
   	Exp.NewList = <(list <Exp>)>
-  	Exp.Callcc  = <(call-cc <Exp>)>
+  	Exp.Callcc  = <(call-with-current-continuation <Exp>)>
   	Exp.Set  = <(set! <Exp> <Exp>)>
   	
   	Exp.If = <(if <Exp>

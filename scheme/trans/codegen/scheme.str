@@ -11,34 +11,41 @@ imports
   codegen/-
 
 rules
-	compile-to-fvm: Program(exprs) -> fvm_program
+	compile-to-fvm: Program(exprs) -> <framevm-from-flat> <concat> [fvm_init, <concat> linear_instr, fvm_exit]
 	  where
 	  	linear_instr := <map(compile-topexp)> exprs;
-	  	fvm_program := <framevm-from-flat> <concat> [<concat> linear_instr, [FVM_IPush("0"), FVM_Return()]]
-	  	
-	  	
-	compile-topexp: DefineSingle(Bind(name, idx), val) -> <concat> [val_instrs, [set_instrs]]
+	  	_ := <new-counter> "line"; 
+	  	_ := <new-counter> "cont"; 
+	  	_ := <new-counter> "lamb"; 
+	  	_ := <new-counter> "prelamb"; 
+	  	line_lbl := $[LINE_[<next-counter> "line"]];
+	  	fvm_init := [FVM_ContNew(FVM_Label(line_lbl)), FVM_Dup(), FVM_Set(FVM_Path([FVM_Cont("n")])), FVM_ContCall(), FVM_Label(line_lbl)];
+	  	fvm_exit := [FVM_IPush("0"), FVM_Return()] 
+	
+	line-init: _ -> (init, line_lbl)
 	  where
+	  	line_lbl := $[LINE_[<next-counter> "line"]];
+	  	init := [FVM_ContNew(FVM_Label(line_lbl)), FVM_Set(FVM_Path([FVM_Cont("n")]))]
+	
+	next-line: lbl -> [FVM_Get(FVM_Path(FVM_Cont("n"))), FVM_ContCall(), FVM_Label(lbl)]
+	  	
+	compile-topexp: DefineSingle(Bind(name, idx), val) -> <concat> [init, val_instrs, [set_instrs], next_line]
+	  where
+	  	(init, lbl) := <line-init>;
 	  	val_instrs := <compile-exp> val;
-	  	set_instrs := FVM_Set(FVM_Path([FVM_Slot(<int-to-string> idx)]))
+	  	set_instrs := FVM_Set(FVM_Path([FVM_Slot(<int-to-string> idx)]));
+	  	next_line := <next-line> lbl
+	
+	compile-topexp: Lambda(args, body) -> <concat> [init, lambda, next_line]
+	  where
+	  	(init, lbl) := <line-init>;
+	  	lambda := <compile-exp> Lambda(args, body);
+	  	next_line := <next-line> lbl
 	
 	// Print results of the rest of the expressions
-	compile-topexp: e -> <concat> [<compile-exp> e, [FVM_Print()]]
-	
-	compile-exp: BinOp(Add(), e1, e2) -> <concat> [e1_instrs, e2_instrs, [FVM_IAdd()]]
+	compile-topexp: e -> <concat> [init, <compile-exp> e, [FVM_Print()], next_line]
 	  where
-	  	e1_instrs := <compile-exp> e1;
-	  	e2_instrs := <compile-exp> e2
-	
-	compile-exp: Ref(name) -> [FVM_Get(fvm_path)]
-	  where
-		fvm_path     := <framevm-path-from-nabl2> (name, "Var", "index")
-	
-	compile-exp: Bool("#f") -> [FVM_IPush("0")]
-	compile-exp: Bool("#t") -> [FVM_IPush("1")]
-	compile-exp: Num(val)   -> [FVM_IPush(val)]
-	
-	
-	
-	
-//	  	
+	  	(init, lbl) := <line-init>;
+	  	next_line := <next-line> lbl
+	  	
+	  	

@@ -58,7 +58,7 @@ lexical syntax
 	ID   = "do"                {reject}
 	ID   = "delay"             {reject}
 	ID   = "quasiquote"        {reject}
-	ID   = "call-cc"           {reject}
+	ID   = "call-with-current-continuation" {reject}
  
 	AbbPrefix = "'"
 	AbbPrefix = "`"

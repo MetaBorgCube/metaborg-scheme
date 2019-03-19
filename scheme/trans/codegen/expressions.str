@@ -1,0 +1,87 @@
+module expressions
+
+imports
+  signatures/framevm-sig
+  fvm-util
+  
+imports
+  signatures/scheme-sig
+  signatures/Expression-sig
+  
+  codegen/-
+
+rules
+
+	compile-exp: BinOp(Add(), e1, e2) -> <concat> [e1_instrs, e2_instrs, [FVM_IAdd()]]
+	  where
+	  	e1_instrs := <compile-exp> e1;
+	  	e2_instrs := <compile-exp> e2
+	
+	// For now assume a list is a function application
+	compile-exp: List([Ref(ref_name)|args]) -> <concat> [get_cont, unpack_cont, prep_args, call_func, ret_instrs]
+	  where
+	  	get_cont := <compile-exp> Ref(ref_name);
+	  	cont_name := $[CONT_[<next-counter> "cont"]];
+	  	unpack_cont := [FVM_Dup(), FVM_ContUnpack()];
+	  	prep_args := <compile-args> args;
+	  	call_func := [FVM_ContNew(FVM_Label(cont_name)), FVM_SetR(FVM_Path([FVM_Cont("c")])), FVM_ContCall()];
+	  	ret_instrs := [FVM_Label(cont_name), FVM_Get(FVM_Path([FVM_SlotR()]))]
+	  	
+	compile-exp: List([func|args]) -> <concat> [func_instrs, [FVM_ContUnpack()], func_args, call_func, return]
+	  where
+	  	func_name := $[LAMBDA_[<next-counter> "lamb"]];
+	  	cont_name := $[CONT_[<next-counter> "cont"]];
+	  	func_instrs := <compile-func> (func, func_name);
+	  	func_args := <compile-args> args;
+	  	call_func := [FVM_Call(FVM_Label(func_name), FVM_Label(cont_name))];
+	  	return := [FVM_Label(cont_name), FVM_Get(FVM_Path(FVM_SlotR()))]
+	
+	compile-exp: Lambda(args, body) -> <compile-func> (Lambda(args, body), name)
+	  where
+	  	name := $[LAMBDA_[<next-counter> "lamb"]]
+	
+	compile-func: (Lambda(_, body), name) -> <concat> [build_cont, jump, [FVM_Label(name) | body_stmts], cont]
+	  where
+	  	build_cont := [FVM_New(), FVM_Dup(), FVM_Link(FVM_Self(), "P"), FVM_ContNewR(FVM_Label(name))];
+	  	body_stmts := <concat> [<concat> <map(compile-exp)> body, [FVM_Return()]];
+	  	cont_name := $[CONT_[<next-counter> "cont"]];
+	  	jump := [FVM_Jump(FVM_Label(cont_name))];
+	  	cont := [FVM_Label(cont_name)]
+	  	
+	compile-args: args -> <concat> <map-with-index(compile-arg)> args
+	compile-arg: (idx, exp) -> <concat> [[FVM_Dup()], exp_instr , set_instr]
+	  where
+	  	exp_instr := <compile-exp> exp;
+	  	set_instr := [FVM_SetR(FVM_Path(FVM_Slot(<int-to-string> <dec> idx)))]	// idx starts at 1 instead of 0, therefore decrement once
+	
+//	compile-exp: Callcc(func) -> <concat> [prep_func, make_cont, call_func, func_body, cont_pre, cont]
+//	  where
+//	  	  	func_name := $[LAMBDA_[<next-counter> "lamb"]];
+//	  		precont_name := $[PRECONT_[<next-counter> "precont"]];
+//	  		cont_name := $[CONT_[<next-counter> "cont"]];
+//	  		prep_func := [FVM_New(), FVM_Dup(), FVM_Link(FVM_Self(), "P")];
+//	  		make_cont := [FVM_Dup(), FVM_Copy(), FVM_ContNewR(FVM_Label(precont_name))];
+//	  		call_func := [FVM_SetR(FVM_Path([FVM_Slot("0")])), FVM_Call(FVM_Label(func_name), FVM_Label(cont_name)), FVM_Label(precont_name)];
+//	  		func_body := <compile-func> (func, func_name);
+//	  		cont_pre := [FVM_Copy(), FVM_ContNewR(FVM_Label(cont_name)), FVM_Call(FVM_Label(cont_name))];
+//	  		cont := [FVM_Label(cont_name), FVM_Get(FVM_Path([FVM_SlotR()]))]	  		
+//	  	
+	compile-exp: Ref(name) -> [FVM_Get(fvm_path)]
+	  where
+		fvm_path := <framevm-path-from-nabl2> (name, "Var", "index")
+		
+	compile-exp: Set(Ref(name), val) -> <concat> [[FVM_Get(fvm_path)], val_instrs, [FVM_Set(fvm_path)]]
+	  where
+		fvm_path   := <framevm-path-from-nabl2> (name, "Var", "index");
+		val_instrs := <compile-exp> val
+	
+	compile-exp: Bool("#f") -> [FVM_IPush("0")]
+	compile-exp: Bool("#t") -> [FVM_IPush("1")]
+	compile-exp: Num(val)   -> [FVM_IPush(val)]
+	
+	
+	compile-exp: e -> []
+	  where
+	  	_ := <debug> e
+	
+  	

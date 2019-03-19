@@ -52,7 +52,8 @@ rules
   Expr [[DefineSingle(Bind(var, idx), val) ^(s) ]] :=
   	Var{var} <- s,
   	Var{var}.index := idx,
-	distinct/name W(s)/Var | error $[Redefinition of variable [var]].
+	distinct/name W(s)/Var | error $[Redefinition of variable [var]],
+	Expr [[val ^(s)]].
   	
   Expr [[List(exps) ^(s) ]] :=
     Map1(Expr)[[exps ^(s)]].
