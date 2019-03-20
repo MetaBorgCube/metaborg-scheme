@@ -22,41 +22,52 @@ rules
   init ^ (s) := new s.
 
   [[ Program(expr) ^ (s) ]] :=
-    Map1(Expr)[[expr ^(s)]].
+    new m,
+    FoldExpr[[expr ^(m)]].
     
-  Expr [[BinOp(op, e1, e2) ^(s)]] :=
+  FoldExpr[[ [] ^(_)]].
+  
+  FoldExpr [[ [DefineSingle(Bind(var, idx), val) | t] ^(p) ]] :=
+	Expr [[val ^(p)]],
+	new s, s ---> p,
+  	Var{var} <- s,
+  	Var{var}.index := idx,
+	// distinct/name W(s)/Var | error $[Redefinition of variable [var]] @var, // This is allowed
+  	FoldExpr [[t ^(s)]].
+	
+  FoldExpr [[ [h|t] ^(s)]] :=
+  	Expr [[h ^(s)]],
+  	FoldExpr [[t ^(s)]].
+
+
+
+  Expr [[ BinOp(op, e1, e2) ^(s)]] :=
   	Expr [[e1 ^(s)]],
   	Expr [[e2 ^(s)]].
   		
-  Expr [[Callcc(exp) ^(s) ]] :=
+  Expr [[ Callcc(exp) ^(s) ]] :=
   	Expr [[exp ^(s)]].
   	
-  Expr [[Set(ref, exp) ^(s) ]] :=
+  Expr [[ Set(ref, exp) ^(s) ]] :=
   	Expr [[ref ^(s)]],
   	Expr [[exp ^(s)]].
   	
-  Expr [[Lambda(binds, body) ^(s)]] :=
+  Expr [[ Lambda(binds, body) ^(s) ]] :=
   	new let, let ---> s,
   	Map1(Bind) [[binds ^(let)]],
   	Map1(Expr) [[body  ^(let)]].
   	
-  Bind [[Bind(name, idx) ^(s) ]] :=
+  Bind [[ Bind(name, idx) ^(s) ]] :=
   	Var{name} <- s,
   	Var{name}.index := idx,
 	distinct/name W(s)/Var | error $[Redefinition of variable [name]].
   	
-  Expr [[Ref(name) ^(s)]] :=
+  Expr [[ Ref(name) ^(s) ]] :=
   	Var{name} -> s,
   	Var{name} |-> d | error $[Variable [name] is not defined] @name.
   	
-  Expr [[DefineSingle(Bind(var, idx), val) ^(s) ]] :=
-  	Var{var} <- s,
-  	Var{var}.index := idx,
-	distinct/name W(s)/Var | error $[Redefinition of variable [var]],
-	Expr [[val ^(s)]].
-  	
-  Expr [[List(exps) ^(s) ]] :=
+  Expr [[ List(exps) ^(s) ]] :=
     Map1(Expr)[[exps ^(s)]].
  
-  Expr [[Num(_) ^(s)]].
-  Expr [[Bool(_) ^(s)]].
+  Expr [[ Num(_) ^(s) ]].
+  Expr [[ Bool(_) ^(s) ]].

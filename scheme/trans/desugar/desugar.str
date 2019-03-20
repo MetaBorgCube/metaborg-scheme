@@ -11,9 +11,9 @@ rules
 	  where
 	  	(body_out, _) := <foldl(desugar-bind-top)> (body, ([], 0))
 	  	
-	desugar-bind-top: (DefineSingle(name, val), (body, idx)) -> (<concat>[body, [DefineSingle(Bind(name, idx), d_val)]], d_idx)
+	desugar-bind-top: (DefineSingle(name, val), (body, idx)) -> (<concat>[body, [DefineSingle(Bind(name, 0), d_val)]], d_idx)
 	  where
-	  	(d_val, d_idx) := <desugar-bind> (val, <inc> idx)
+	  	(d_val, d_idx) := <desugar-bind> (val, 1)
 	  	
 	desugar-bind-top: (exp, (body, idx)) -> (<concat>[body, [d_exp]], d_idx)
 	  where

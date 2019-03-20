@@ -19,21 +19,26 @@ rules
 	  	_ := <new-counter> "prelamb"; 
 	  	line_lbl := $[LINE_[<next-counter> "line"]];
 	  	linear_instr := <map(compile-topexp)> exprs;
-	  	fvm_init := [FVM_New(), FVM_Dup(), FVM_Link(FVM_Self(), "P"), FVM_Dup(), FVM_ContNewR(FVM_Label(line_lbl)), FVM_Set(FVM_Path([FVM_Cont("n")])), FVM_ScopeDown(FVM_Label(line_lbl)), FVM_Label(line_lbl)];
+	  	fvm_init := [FVM_New(), FVM_Dup(), FVM_Link(FVM_Self(), "Q"), FVM_Dup(), FVM_ContNewR(FVM_Label(line_lbl)), FVM_Set(FVM_Path([FVM_Cont("n")])), FVM_ScopeDown(FVM_Label(line_lbl)), FVM_Label(line_lbl)];
 	  	fvm_exit := [FVM_IPush("0"), FVM_Return()] 
 	
 	line-init: _ -> (init, line_lbl)
 	  where
 	  	line_lbl := $[LINE_[<next-counter> "line"]];
-	  	init := [FVM_ContNew(FVM_Label(line_lbl)), FVM_Set(FVM_Path([FVM_Link("P"), FVM_Cont("n")]))]
+	  	init := [FVM_ContNew(FVM_Label(line_lbl)), FVM_Set(FVM_Path([FVM_Link("Q"), FVM_Cont("n")]))]
 	
-	next-line: lbl -> [FVM_Get(FVM_Path([FVM_Link("P"), FVM_Cont("n")])), FVM_ContCall(), FVM_Label(lbl)]
+	next-line: lbl -> [FVM_Get(FVM_Path([FVM_Link("Q"), FVM_Cont("n")])), FVM_ContCall(), FVM_Label(lbl)]
 	  	
-	compile-topexp: DefineSingle(Bind(name, idx), val) -> <concat> [init, val_instrs, [set_instrs], next_line]
+	compile-topexp: DefineSingle(Bind(name, idx), val) -> <concat> [init, val_instrs, scope_instr, scopedown, init_newscope, set_instrs, next_line]
 	  where
 	  	(init, lbl) := <line-init>;
 	  	val_instrs := <compile-exp> val;
-	  	set_instrs := FVM_Set(FVM_Path([FVM_Slot(<int-to-string> idx)]));
+	  	scope_instr := [FVM_New(), FVM_Dup(), FVM_Link(FVM_Self(), "P"), FVM_Dup(), FVM_Link(FVM_Path([FVM_Link("Q")]), "Q"), FVM_Dup(), FVM_SwapN("2"), FVM_SetR(FVM_Path([FVM_Slot("0")]))];
+	  	
+	  	cont_name := $[CONT_[<next-counter> "cont"]];
+	  	scopedown := [FVM_ScopeDown(FVM_Label(cont_name))];
+	  	init_newscope := [FVM_Label(cont_name), FVM_ContNew(FVM_Label(lbl)), FVM_Set(FVM_Path([FVM_Link("Q"), FVM_Cont("n")]))];
+	  	set_instrs := [FVM_Get(FVM_Path([FVM_Slot("0")])), FVM_Set(FVM_Path([FVM_Slot(<int-to-string> idx)]))];
 	  	next_line := <next-line> lbl
 	
 	compile-topexp: Lambda(args, body) -> <concat> [init, lambda, next_line]
