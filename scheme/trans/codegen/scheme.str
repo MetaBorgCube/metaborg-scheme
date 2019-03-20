@@ -19,15 +19,15 @@ rules
 	  	_ := <new-counter> "prelamb"; 
 	  	line_lbl := $[LINE_[<next-counter> "line"]];
 	  	linear_instr := <map(compile-topexp)> exprs;
-	  	fvm_init := [FVM_ContNew(FVM_Label(line_lbl)), FVM_Dup(), FVM_Set(FVM_Path([FVM_Cont("n")])), FVM_ContCall(), FVM_Label(line_lbl)];
+	  	fvm_init := [FVM_New(), FVM_Dup(), FVM_Link(FVM_Self(), "P"), FVM_Dup(), FVM_ContNewR(FVM_Label(line_lbl)), FVM_Set(FVM_Path([FVM_Cont("n")])), FVM_ScopeDown(FVM_Label(line_lbl)), FVM_Label(line_lbl)];
 	  	fvm_exit := [FVM_IPush("0"), FVM_Return()] 
 	
 	line-init: _ -> (init, line_lbl)
 	  where
 	  	line_lbl := $[LINE_[<next-counter> "line"]];
-	  	init := [FVM_ContNew(FVM_Label(line_lbl)), FVM_Set(FVM_Path([FVM_Cont("n")]))]
+	  	init := [FVM_ContNew(FVM_Label(line_lbl)), FVM_Set(FVM_Path([FVM_Link("P"), FVM_Cont("n")]))]
 	
-	next-line: lbl -> [FVM_Get(FVM_Path(FVM_Cont("n"))), FVM_ContCall(), FVM_Label(lbl)]
+	next-line: lbl -> [FVM_Get(FVM_Path([FVM_Link("P"), FVM_Cont("n")])), FVM_ContCall(), FVM_Label(lbl)]
 	  	
 	compile-topexp: DefineSingle(Bind(name, idx), val) -> <concat> [init, val_instrs, [set_instrs], next_line]
 	  where
