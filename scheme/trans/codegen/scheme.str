@@ -9,6 +9,7 @@ imports
   signatures/Expression-sig
   
   codegen/-
+  desugar/-
 
 rules
 	compile-to-fvm: Program(exprs) -> <framevm-from-flat> <concat> [fvm_init, <concat> linear_instr, fvm_exit]
@@ -29,28 +30,59 @@ rules
 	
 	next-line: lbl -> [FVM_Get(FVM_Path([FVM_Link("Q"), FVM_Cont("n")])), FVM_ContCall(), FVM_Label(lbl)]
 	  	
-	compile-topexp: DefineSingle(Bind(name, idx), val) -> <concat> [init, val_instrs, scope_instr, scopedown, init_newscope, set_instrs, next_line]
+	scope-down: e -> [FVM_New(), FVM_Dup(), FVM_Link(FVM_Self(), "P"), FVM_ScopeDown(FVM_Label(cont_name)), FVM_Label(cont_name)]
+	  where
+	  	cont_name := $[CONT_[<next-counter> "cont"]]
+	  	
+	scope-up: e -> [FVM_ScopeUp(FVM_Path([FVM_Link("P")]), FVM_Label(cont_name)), FVM_Label(cont_name)]
+	  where
+	  	cont_name := $[CONT_[<next-counter> "cont"]]
+	  	
+	  	
+	  	
+	compile-topexp: DefineSingle(Bind(name, idx), val) -> <concat> [init, scopedownexp, val_instrs, set_instrs, scopeupexp, scope_instr, scopedown, init_newscope, set_instrs2, next_line]
 	  where
 	  	(init, lbl) := <line-init>;
+	  	scopedownexp := <scope-down>;
 	  	val_instrs := <compile-exp> val;
-	  	scope_instr := [FVM_New(), FVM_Dup(), FVM_Link(FVM_Self(), "P"), FVM_Dup(), FVM_Link(FVM_Path([FVM_Link("Q")]), "Q"), FVM_Dup(), FVM_SwapN("2"), FVM_SetR(FVM_Path([FVM_Slot("0")]))];
+	  	set_instrs := [FVM_Set(FVM_Path([FVM_Link("P"), FVM_SlotR()]))];
+	  	scopeupexp := <scope-up>;
+	  	
+	  	scope_instr := [FVM_New(), FVM_Dup(), FVM_Link(FVM_Self(), "P"), FVM_Dup(), FVM_Link(FVM_Path([FVM_Link("Q")]), "Q")];
 	  	
 	  	cont_name := $[CONT_[<next-counter> "cont"]];
 	  	scopedown := [FVM_ScopeDown(FVM_Label(cont_name))];
 	  	init_newscope := [FVM_Label(cont_name), FVM_ContNew(FVM_Label(lbl)), FVM_Set(FVM_Path([FVM_Link("Q"), FVM_Cont("n")]))];
-	  	set_instrs := [FVM_Get(FVM_Path([FVM_Slot("0")])), FVM_Set(FVM_Path([FVM_Slot(<int-to-string> idx)]))];
+	  	
+	  	set_instrs2 := [FVM_Get(FVM_Path([FVM_Link("P"), FVM_SlotR()])), FVM_Set(FVM_Path([FVM_Slot(<int-to-string> idx)]))];
 	  	next_line := <next-line> lbl
-	
-	compile-topexp: Lambda(args, body) -> <concat> [init, lambda, next_line]
+	  	
+	compile-topexp: RedefineSingle(name, val) -> <concat> [init, scopedown, val_instrs, store_instr, scopeup, set_instrs, next_line]
 	  where
 	  	(init, lbl) := <line-init>;
+	  	scopedown := <scope-down>;
+	  	val_instrs := <compile-exp> val;
+	  	
+	  	store_instr := [FVM_Set(FVM_Path([FVM_Link("P"), FVM_SlotR()]))];
+	  	scopeup := <scope-up>;
+	  	set_instrs := [FVM_Get(FVM_Path([FVM_SlotR()])), FVM_Set(<framevm-path-from-nabl2> (name, "Var", "index"))];
+	  	next_line := <next-line> lbl
+	
+	compile-topexp: Lambda(args, body) -> <concat> [init, scopedown, lambda, scopeup, next_line]
+	  where
+	  	(init, lbl) := <line-init>;
+	  	scopedown := <scope-down>;
 	  	lambda := <compile-exp> Lambda(args, body);
+	  	scopeup := <scope-up>;
 	  	next_line := <next-line> lbl
 	
 	// Print results of the rest of the expressions
-	compile-topexp: e -> <concat> [init, <compile-exp> e, [FVM_Print()], next_line]
+	compile-topexp: e -> <concat> [init, scopedown, exp, [FVM_Print()], scopeup, next_line]
 	  where
 	  	(init, lbl) := <line-init>;
+	  	scopedown := <scope-down>;
+	  	exp := <compile-exp> e;
+	  	scopeup := <scope-up>;
 	  	next_line := <next-line> lbl
 	  	
 	  	

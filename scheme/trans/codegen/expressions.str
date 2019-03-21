@@ -76,8 +76,8 @@ rules
 	  	store_arg := [FVM_Dup(), FVM_SwapN("2"), FVM_SetR(FVM_Path([FVM_Slot("0")]))];
 	  	call_func := [FVM_Call(FVM_Label(func_name), FVM_Label(cont_name))];
 	  	func_body := <compile-func> (func, func_name);
-	  	return    := [FVM_Label(cont_name), FVM_Get(FVM_Path([FVM_SlotR()]))];
-	  	precont   := [FVM_Label(precont_name), FVM_Copy(), FVM_Dup(), FVM_Get(FVM_Path([FVM_Slot("0")])), FVM_SetR(FVM_Path([FVM_SlotR()])), FVM_ContNewR(FVM_Label(cont_name)), FVM_ContCall()]
+	  	precont   := [FVM_Label(precont_name), FVM_Copy(), FVM_Dup(), FVM_Get(FVM_Path([FVM_Slot("0")])), FVM_SetR(FVM_Path([FVM_SlotR()])), FVM_ContNewR(FVM_Label(cont_name)), FVM_ContCall()];
+	  	return    := [FVM_Label(cont_name), FVM_Get(FVM_Path([FVM_SlotR()]))]
 
 	compile-exp: Ref(name) -> [FVM_Get(fvm_path)]
 	  where
