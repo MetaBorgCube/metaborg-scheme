@@ -88,6 +88,17 @@ rules
 		fvm_path   := <framevm-path-from-nabl2> (name, "Var", "index");
 		val_instrs := <compile-exp> val
 	
+	compile-exp: IfElse(cond, then, else) -> <concat> [eval_cond, [FVM_JumpZ(FVM_Label(else_lbl), FVM_Label(then_lbl))], then_instr, else_instr, [cont_instr]]
+	  where
+	  	eval_cond := <compile-exp> cond;
+	  	then_lbl := $[THEN_[<next-counter> "then"]];
+	  	else_lbl := $[ELSE_[<next-counter> "else"]];
+	  	cont_instr := FVM_Label($[CONT[<next-counter> "cont"]]);
+	  	then_instr := <concat> [[FVM_Label(then_lbl)], <compile-exp> then, [FVM_Jump(cont_instr)]];
+	  	else_instr := <concat> [[FVM_Label(else_lbl)], <compile-exp> else, [FVM_Jump(cont_instr)]]
+	  	 
+	
+	
 	compile-exp: Bool("#f") -> [FVM_IPush("0")]
 	compile-exp: Bool("#t") -> [FVM_IPush("1")]
 	compile-exp: Num(val)   -> [FVM_IPush(val)]

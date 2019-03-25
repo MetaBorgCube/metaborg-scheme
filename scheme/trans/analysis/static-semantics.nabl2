@@ -50,6 +50,11 @@ rules
 
 
 
+  Expr [[ IfElse(cond, then, else) ^(s)]] :=
+  	Expr [[cond ^(s)]],
+  	Expr [[then ^(s)]],
+  	Expr [[else ^(s)]].
+  	
   Expr [[ BinOp(op, e1, e2) ^(s)]] :=
   	Expr [[e1 ^(s)]],
   	Expr [[e2 ^(s)]].

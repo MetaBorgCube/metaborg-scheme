@@ -18,6 +18,8 @@ rules
 	  	_ := <new-counter> "cont"; 
 	  	_ := <new-counter> "lamb"; 
 	  	_ := <new-counter> "prelamb"; 
+	  	_ := <new-counter> "then"; 
+	  	_ := <new-counter> "else"; 
 	  	line_lbl := $[LINE_[<next-counter> "line"]];
 	  	linear_instr := <map(compile-topexp)> exprs;
 	  	fvm_init := [FVM_New(), FVM_Dup(), FVM_Link(FVM_Self(), "Q"), FVM_Dup(), FVM_ContNewR(FVM_Label(line_lbl)), FVM_Set(FVM_Path([FVM_Cont("n")])), FVM_ScopeDown(FVM_Label(line_lbl)), FVM_Label(line_lbl)];

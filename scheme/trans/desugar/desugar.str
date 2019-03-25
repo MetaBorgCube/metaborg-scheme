@@ -45,10 +45,16 @@ rules
 	  where
 	  	(d_exp, d_idx) := <desugar-bind> (exp, idx)
 	  	
+	desugar-bind: (IfElse(cond, then, else), idx) -> (IfElse(d_cond, d_then, d_else), e_idx)
+	  where
+	  	(d_cond, c_idx) := <desugar-bind> (cond, idx);
+	  	(d_then, t_idx) := <desugar-bind> (then, c_idx);
+	  	(d_else, e_idx) := <desugar-bind> (else, t_idx)
+	  	
 	desugar-bind: (BinOp(op, l, r), idx) -> (BinOp(op, d_l, d_r), r_idx)
 	  where
 	  	(d_l, l_idx) := <desugar-bind> (l, idx);
-	  	(d_r, r_idx) := <desugar-bind> (r, idx)
+	  	(d_r, r_idx) := <desugar-bind> (r, l_idx)
 	  	
 	desugar-bind: (Lambda(args, body), idx) -> (Lambda(binds, d_body), idx)
 	  where

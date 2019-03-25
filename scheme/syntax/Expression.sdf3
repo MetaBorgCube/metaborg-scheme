@@ -20,10 +20,7 @@ context-free syntax
   	Exp.NewList = <(list <Exp>)>
   	Exp.Callcc  = <(call-with-current-continuation <Exp>)>
   	Exp.Set  = <(set! <Exp> <Exp>)>
-  	
-  	Exp.If = <(if <Exp>
-  	<Exp>)>
-  	
+  	  	
   	Exp.IfElse = <(if <Exp>
   	<Exp>
   	<Exp>)>
