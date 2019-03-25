@@ -6,4 +6,4 @@
 )										; 9
 (add-x 10)								; 16
 (set! x 2)								; 6
-(add-x 40)								; 42
+(add-x 40)								; 46 (or 42 in MIT-scheme)
