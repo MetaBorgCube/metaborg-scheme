@@ -66,11 +66,22 @@ rules
   	Expr [[ref ^(s)]],
   	Expr [[exp ^(s)]].
   	
-  Expr [[ Lambda(binds, body) ^(s) ]] :=
+  Expr [[ Let(binds, body) ^(s) ]] :=
   	new let, let ---> s,
+  	Map1(Bind) [[binds ^(let, s)]],
+  	Map1(Expr) [[body  ^(let)]].
+  	
+  Expr [[ Lambda(binds, body) ^(s) ]] :=
+  	new lam, lam ---> s,
   	Map1(Bind) [[binds ^(let)]],
   	Map1(Expr) [[body  ^(let)]].
   	
+  Bind [[ Bind(Bind(name, idx), val) ^(s, p) ]] :=
+  	Var{name} <- s,
+  	Var{name}.index := idx,
+	distinct/name W(s)/Var | error $[Redefinition of variable [name]],
+	Expr [[val ^(p)]].
+	
   Bind [[ Bind(name, idx) ^(s) ]] :=
   	Var{name} <- s,
   	Var{name}.index := idx,

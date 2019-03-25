@@ -60,6 +60,14 @@ rules
 	  where
 	  	(binds, body_idx) := <foldl(desugar-bind-args)> (args, ([], 0));
 	  	(d_body, _) := <desugar-bind-seq> (body, body_idx)
+	  	
+	desugar-bind: (LetStar([bind], body), idx) -> <desugar-bind> (Let([bind], body), idx)
+	desugar-bind: (LetStar([bind|bind_t], body), idx) -> <desugar-bind> (Let([bind], [LetStar(bind_t, body)]), idx)
+	
+	desugar-bind: (Let(binds, body), idx) -> (Let(d_binds, d_body), idx)
+	  where
+	  	(d_binds, body_idx) := <foldl(desugar-bind-args)> (binds, ([], 0));
+	  	(d_body, _) := <desugar-bind-seq> (body, body_idx)
 	
 	desugar-bind: (List(items), idx) -> (List(d_items), d_idx)
 	  where
@@ -80,7 +88,9 @@ rules
 	
 //	desugar-bind: (e, idx) -> (<debug> e, idx)
 	
+	desugar-bind-args: (Bind(name, val), (args, idx)) -> (<concat> [args, [Bind(Bind(name, idx), val)]], <inc> idx)
 	desugar-bind-args: (name, (args, idx)) -> (<concat> [args, [Bind(name, idx)]], <inc> idx)
+	
 	desugar-bind-seq: (body, idx) -> <foldl(desugar-bind-seq)> (body, ([], idx))
 	desugar-bind-seq: (exp, (list, idx)) -> (<concat> [list, [d_exp]], d_idx)
       where

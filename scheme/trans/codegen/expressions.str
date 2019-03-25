@@ -60,6 +60,7 @@ rules
 	  	
 
 	compile-args: args -> <concat> <map-with-index(compile-arg)> args
+	compile-arg: (idx, Bind(_, exp)) -> <compile-arg> (idx, exp)
 	compile-arg: (idx, exp) -> <concat> [[FVM_Dup()], exp_instr , set_instr]
 	  where
 	  	exp_instr := <compile-exp> exp;
@@ -97,7 +98,16 @@ rules
 	  	then_instr := <concat> [[FVM_Label(then_lbl)], <compile-exp> then, [FVM_Jump(cont_instr)]];
 	  	else_instr := <concat> [[FVM_Label(else_lbl)], <compile-exp> else, [FVM_Jump(cont_instr)]]
 	  	 
-	
+	compile-exp: Let(binds, body) -> <concat> [newframe, assign_args, scopedown, body_stmts, scopeup]
+	  where
+	  	let_name := $[LET_[<next-counter> "let"]];
+	  	cont_name := $[CONT_[<next-counter> "cont"]];
+	  	newframe := [FVM_New(), FVM_Dup(), FVM_Link(FVM_Self(), "P")];
+	  	assign_args := <compile-args> binds;
+	  	scopedown := [FVM_Call(FVM_Label(let_name), FVM_Label(cont_name)), FVM_Label(let_name)];
+	  	body_stmts := <concat> [<concat> <seq-pop-all><map(compile-exp)> body, [FVM_Return()]];
+	  	scopeup := [FVM_Label(cont_name), FVM_Get(FVM_Path([FVM_SlotR()]))]
+	  	
 	
 	compile-exp: Bool("#f") -> [FVM_IPush("0")]
 	compile-exp: Bool("#t") -> [FVM_IPush("1")]

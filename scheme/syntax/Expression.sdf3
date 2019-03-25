@@ -26,9 +26,9 @@ context-free syntax
   	<Exp>)>
   	
   	Exp.Let = <(let (<Bind*>)
-  	<Exp>)>
+  	<Exp+>)>
   	Exp.LetStar = <(let* (<Bind*>)
-  	<Exp>)>
+  	<Exp+>)>
 	
 	Exp.List = <(<Exp*>)>
 	

@@ -16,6 +16,7 @@ rules
 	  where
 	  	_ := <new-counter> "line"; 
 	  	_ := <new-counter> "cont"; 
+	  	_ := <new-counter> "let"; 
 	  	_ := <new-counter> "lamb"; 
 	  	_ := <new-counter> "prelamb"; 
 	  	_ := <new-counter> "then"; 
