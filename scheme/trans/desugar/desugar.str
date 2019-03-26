@@ -7,7 +7,7 @@ imports
 signature
   sorts S
   constructors    
-    RedefineSingle : STRING * Exp -> S
+    Redefine : STRING * Exp -> S
     
 rules
 	desugar = desugar-define; desugar-bind-all
@@ -19,11 +19,11 @@ rules
 	  where
 	  	(body_out, _) := <foldl(desugar-define)> (body, ([], []))
 	
-	desugar-define: (DefineSingle(name, val), (body, defines)) -> (<concat>[body, [RedefineSingle(name, val)]], defines)
+	desugar-define: (Define(name, val), (body, defines)) -> (<concat>[body, [Redefine(name, val)]], defines)
 	  where
 	  	_ := <elem> (name, defines)
 	
-	desugar-define: (DefineSingle(name, val), (body, defines)) -> (<concat>[body, [DefineSingle(name, val)]], [name | defines])
+	desugar-define: (Define(name, val), (body, defines)) -> (<concat>[body, [Define(name, val)]], [name | defines])
 	
 	desugar-define: (e, (body, defines)) -> (<concat>[body, [e]], defines)
 	  	
@@ -33,11 +33,11 @@ rules
 	  where
 	  	(body_out, _) := <foldl(desugar-bind-top)> (body, ([], 0))
 	  	
-	desugar-bind-top: (DefineSingle(name, val), (body, idx)) -> (<concat>[body, [DefineSingle(Bind(name, 0), d_val)]], d_idx)
+	desugar-bind-top: (Define(name, val), (body, idx)) -> (<concat>[body, [Define(Bind(name, 0), d_val)]], d_idx)
 	  where
 	  	(d_val, d_idx) := <desugar-bind> (val, 1)
 	  	
-	desugar-bind-top: (RedefineSingle(name, val), (body, idx)) -> (<concat>[body, [RedefineSingle(name, d_val)]], d_idx)
+	desugar-bind-top: (Redefine(name, val), (body, idx)) -> (<concat>[body, [Redefine(name, d_val)]], d_idx)
 	  where
 	  	(d_val, d_idx) := <desugar-bind> (val, idx)
 	  	

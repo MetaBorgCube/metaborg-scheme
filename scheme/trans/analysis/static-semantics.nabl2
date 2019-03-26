@@ -27,7 +27,7 @@ rules
     
   FoldExpr[[ [] ^(_)]].
   
-  FoldExpr [[ [DefineSingle(Bind(var, idx), val) | t] ^(p) ]] :=
+  FoldExpr [[ [Define(Bind(var, idx), val) | t] ^(p) ]] :=
 	new e, e ---> p,
 	Expr [[val ^(e)]],
 	new s, s ---> p,
@@ -36,7 +36,7 @@ rules
 	// distinct/name W(s)/Var | error $[Redefinition of variable [var]] @var, // This is allowed
   	FoldExpr [[t ^(s)]].
   	
-  FoldExpr [[ [RedefineSingle(var, val) | t] ^(s) ]] :=
+  FoldExpr [[ [Redefine(var, val) | t] ^(s) ]] :=
 	new e, e ---> s,
 	Expr [[val ^(e)]],
 	Var{var} -> s,

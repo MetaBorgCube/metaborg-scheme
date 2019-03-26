@@ -13,9 +13,8 @@ context-free priorities
 context-free syntax
   	Exp.BinOp = <(<BinOp> <Exp> <Exp>)>
   	Exp.UnOp  = <(<UnOp> <Exp>)>
-  	Exp.Define = <(define (<Bind*>) <Exp>)>
   	Exp.Lambda = <(lambda (<ID*>) <Exp+>)>
-  	Exp.DefineSingle = <(define <ID> <Exp>)>
+  	Exp.Define = <(define <ID> <Exp>)>
   	Exp.Quote = <'<Exp>>
   	Exp.NewList = <(list <Exp>)>
   	Exp.Callcc  = <(call-with-current-continuation <Exp>)>

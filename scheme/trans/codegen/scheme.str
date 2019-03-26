@@ -43,7 +43,7 @@ rules
 	  	
 	  	
 	  	
-	compile-topexp: DefineSingle(Bind(name, idx), val) -> <concat> [init, scopedownexp, val_instrs, set_instrs, scopeupexp, scope_instr, scopedown, init_newscope, set_instrs2, next_line]
+	compile-topexp: Define(Bind(name, idx), val) -> <concat> [init, scopedownexp, val_instrs, set_instrs, scopeupexp, scope_instr, scopedown, init_newscope, set_instrs2, next_line]
 	  where
 	  	(init, lbl) := <line-init>;
 	  	scopedownexp := <scope-down>;
@@ -60,7 +60,7 @@ rules
 	  	set_instrs2 := [FVM_Get(FVM_Path([FVM_Link("P"), FVM_SlotR()])), FVM_Set(FVM_Path([FVM_Slot(<int-to-string> idx)]))];
 	  	next_line := <next-line> lbl
 	  	
-	compile-topexp: RedefineSingle(name, val) -> <concat> [init, scopedown, val_instrs, store_instr, scopeup, set_instrs, next_line]
+	compile-topexp: Redefine(name, val) -> <concat> [init, scopedown, val_instrs, store_instr, scopeup, set_instrs, next_line]
 	  where
 	  	(init, lbl) := <line-init>;
 	  	scopedown := <scope-down>;
