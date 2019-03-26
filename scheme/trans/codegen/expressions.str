@@ -12,10 +12,26 @@ imports
 
 rules
 
-	compile-exp: BinOp(Add(), e1, e2) -> <concat> [e1_instrs, e2_instrs, [FVM_IAdd()]]
+	compile-exp: BinOp(op, e1, e2) -> <concat> [e1_instrs, e2_instrs, binops]
 	  where
 	  	e1_instrs := <compile-exp> e1;
-	  	e2_instrs := <compile-exp> e2
+	  	e2_instrs := <compile-exp> e2;
+	  	binops := <compile-binop> op
+	  	
+	compile-binop: Add() -> [FVM_IAdd()]
+	compile-binop: Sub() -> [FVM_ISub()]
+	compile-binop: Mul() -> [FVM_IMul()]
+	compile-binop: Div() -> [FVM_IDiv()]
+	
+	compile-binop: And() -> [FVM_IAnd()]
+	compile-binop: Or()  -> [FVM_IOr()]
+	compile-binop: Eq()  -> [FVM_IEq()]
+	compile-binop: Lt()  -> [FVM_ILt()]
+	compile-binop: Gt()  -> [FVM_IGt()]
+	
+	compile-binop: Gte()  -> [FVM_DupN("2"), FVM_DupN("2"), FVM_IGt(), FVM_SwapN("2"), FVM_Swap(), FVM_IEq(), FVM_IOr()]
+	compile-binop: Lte()  -> [FVM_DupN("2"), FVM_DupN("2"), FVM_ILt(), FVM_SwapN("2"), FVM_Swap(), FVM_IEq(), FVM_IOr()]
+	
 	
 	// For now assume a list is a function application
 	compile-exp: List([Ref(ref_name)|args]) -> <concat> [get_cont, unpack_cont, prep_args, call_func, ret_instrs]
