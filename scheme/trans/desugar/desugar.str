@@ -8,6 +8,8 @@ signature
   sorts S
   constructors    
     Redefine : STRING * Exp -> S
+    Conss : Exp * Exp -> S
+    EmptyList: S
     
 rules
 	desugar = desugar-define; desugar-bind-all
@@ -51,6 +53,16 @@ rules
 	  	(d_then, t_idx) := <desugar-bind> (then, c_idx);
 	  	(d_else, e_idx) := <desugar-bind> (else, t_idx)
 	  	
+	  	
+	desugar-bind: (UnOp(op, exp), idx) -> (UnOp(op, d_exp), d_idx)
+	  where
+	  	(d_exp, d_idx) := <desugar-bind> (exp, idx)
+	  	
+	desugar-bind: (BinOp(Conz(), l, r), idx) -> (Conss(d_l, d_r), r_idx)
+	  where
+	  	(d_l, l_idx) := <desugar-bind> (l, idx);
+	  	(d_r, r_idx) := <desugar-bind> (r, l_idx)
+	  	
 	desugar-bind: (BinOp(op, l, r), idx) -> (BinOp(op, d_l, d_r), r_idx)
 	  where
 	  	(d_l, l_idx) := <desugar-bind> (l, idx);
@@ -69,7 +81,23 @@ rules
 	  	(d_binds, body_idx) := <foldl(desugar-bind-args)> (binds, ([], 0));
 	  	(d_body, _) := <desugar-bind-seq> (body, body_idx)
 	
-	desugar-bind: (List(items), idx) -> (List(d_items), d_idx)
+	desugar-bind: (Quote(FunApp([])), idx) -> (EmptyList(), idx)
+	desugar-bind: (FunApp([Ref("list")]), idx) -> (EmptyList(), idx)
+	desugar-bind: (FunApp([Ref("list") | vals]), idx) -> (d_conslist, d_idx)
+	  where
+	  	conslist := <foldr(!EmptyList(), desugar-cons)> vals;
+	  	(d_conslist, d_idx) := <desugar-bind> (conslist, idx)
+	  	
+	desugar-bind: (Conss(h, t), idx) -> (Conss(d_h, d_t), t_idx)
+	  where
+	  	(d_h, h_idx) := <desugar-bind> (h, idx);
+	  	(d_t, t_idx) := <desugar-bind> (t, h_idx)
+	  	
+	desugar-bind: (EmptyList(), idx) -> (EmptyList(), idx)
+	  	
+	desugar-cons: (elem, tail) -> Conss(elem, tail)
+	  	
+	desugar-bind: (FunApp(items), idx) -> (FunApp(d_items), d_idx)
 	  where
 	  	(d_items, d_idx) := <desugar-bind-seq> (items, idx)
 	  	

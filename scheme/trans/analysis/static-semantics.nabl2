@@ -33,7 +33,7 @@ rules
 	new s, s ---> p,
   	Var{var} <- s,
   	Var{var}.index := idx,
-	// distinct/name W(s)/Var | error $[Redefinition of variable [var]] @var, // This is allowed
+	distinct/name W(s)/Var | error $[Redefinition of variable [var], there must be a problem with desugaring] @var,
   	FoldExpr [[t ^(s)]].
   	
   FoldExpr [[ [Redefine(var, val) | t] ^(s) ]] :=
@@ -55,6 +55,16 @@ rules
   	Expr [[then ^(s)]],
   	Expr [[else ^(s)]].
   	
+  Expr [[ UnOp(op, exp) ^(s)]] :=
+  	Expr [[exp ^(s)]].
+  	
+  
+  Expr [[ EmptyList() ^(s)]].
+  
+  Expr [[ Conss(h, t) ^(s)]] :=
+  	Expr [[h ^(s)]],
+  	Expr [[t ^(s)]].
+  	
   Expr [[ BinOp(op, e1, e2) ^(s)]] :=
   	Expr [[e1 ^(s)]],
   	Expr [[e2 ^(s)]].
@@ -73,8 +83,8 @@ rules
   	
   Expr [[ Lambda(binds, body) ^(s) ]] :=
   	new lam, lam ---> s,
-  	Map1(Bind) [[binds ^(let)]],
-  	Map1(Expr) [[body  ^(let)]].
+  	Map1(Bind) [[binds ^(lam)]],
+  	Map1(Expr) [[body  ^(lam)]].
   	
   Bind [[ Bind(Bind(name, idx), val) ^(s, p) ]] :=
   	Var{name} <- s,
@@ -91,7 +101,7 @@ rules
   	Var{name} -> s,
   	Var{name} |-> d | error $[Variable [name] is not defined] @name.
   	
-  Expr [[ List(exps) ^(s) ]] :=
+  Expr [[ FunApp(exps) ^(s) ]] :=
     Map1(Expr)[[exps ^(s)]].
  
   Expr [[ Num(_) ^(s) ]].

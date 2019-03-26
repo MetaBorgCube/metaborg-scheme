@@ -16,7 +16,6 @@ context-free syntax
   	Exp.Lambda = <(lambda (<ID*>) <Exp+>)>
   	Exp.Define = <(define <ID> <Exp>)>
   	Exp.Quote = <'<Exp>>
-  	Exp.NewList = <(list <Exp>)>
   	Exp.Callcc  = <(call-with-current-continuation <Exp>)>
   	Exp.Set  = <(set! <Exp> <Exp>)>
   	  	
@@ -29,7 +28,8 @@ context-free syntax
   	Exp.LetStar = <(let* (<Bind*>)
   	<Exp+>)>
 	
-	Exp.List = <(<Exp*>)>
+	Exp.FunApp = <(<Exp*>)>
+	List.List = <(<Exp*>)>
 	
 	Bind.Bind = <(<ID> <Exp>)>
 	
@@ -47,11 +47,11 @@ context-free syntax
 	UnOp.IsSym    = "symbol?"
 	UnOp.IsBool   = "boolean?"
 	UnOp.IsString = "string?"
-	UnOp.Null     = "string?"
+	UnOp.IsNull   = "null?"
 		
 	BinOp.And  = "and"
 	BinOp.Or   = "or"
-	BinOp.Con  = "cons"
+	BinOp.Conz = "cons"
 	
 	BinOp.Eq  = "="
 	BinOp.Lte = "<="

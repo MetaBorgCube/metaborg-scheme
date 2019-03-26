@@ -12,6 +12,20 @@ imports
 
 rules
 
+	compile-exp: UnOp(op, exp) -> <concat> [exp_instrs, unops]
+	  where
+	  	exp_instrs := <compile-exp> exp;
+	  	unops := <compile-unop> op
+	  	
+	compile-unop: Abs() -> <concat> [comp, [FVM_JumpZ(else, then)], then_instr, [else]]
+	  where
+	  	then := FVM_Label($[THEN_[<next-counter> "then"]]);
+	  	else := FVM_Label($[ELSE_[<next-counter> "else"]]);
+	  	comp := [FVM_Dup(), FVM_IPush("0"), FVM_ILt()];
+	  	then_instr := [then, FVM_INeg(), FVM_Jump(else)]
+	  	
+	compile-unop: Not() -> [FVM_INeg()]
+	  	
 	compile-exp: BinOp(op, e1, e2) -> <concat> [e1_instrs, e2_instrs, binops]
 	  where
 	  	e1_instrs := <compile-exp> e1;
@@ -32,9 +46,17 @@ rules
 	compile-binop: Gte()  -> [FVM_DupN("2"), FVM_DupN("2"), FVM_IGt(), FVM_SwapN("2"), FVM_Swap(), FVM_IEq(), FVM_IOr()]
 	compile-binop: Lte()  -> [FVM_DupN("2"), FVM_DupN("2"), FVM_ILt(), FVM_SwapN("2"), FVM_Swap(), FVM_IEq(), FVM_IOr()]
 	
+	compile-exp: Conss(h, tail) -> <concat> [h_instr, new_cons, h_set, tail_instr, t_set]
+	  where
+	  	h_instr := <compile-exp> h;
+	  	new_cons := [FVM_New()];
+	  	h_set := [FVM_Dup(), FVM_SetR(FVM_Path([FVM_Slot("0")])), FVM_Dup()];
+	  	tail_instr := <compile-exp> tail;
+	  	t_set := [FVM_SetR(FVM_Path([FVM_Slot("1")]))]
+	  	
+	compile-exp: EmptyList() -> [FVM_New()]
 	
-	// For now assume a list is a function application
-	compile-exp: List([Ref(ref_name)|args]) -> <concat> [get_cont, unpack_cont, prep_args, call_func, ret_instrs]
+	compile-exp: FunApp([Ref(ref_name)|args]) -> <concat> [get_cont, unpack_cont, prep_args, call_func, ret_instrs]
 	  where
 	  	get_cont := <compile-exp> Ref(ref_name);
 	  	cont_name := $[CONT_[<next-counter> "cont"]];
@@ -43,7 +65,7 @@ rules
 	  	call_func := [FVM_ContNew(FVM_Label(cont_name)), FVM_SetR(FVM_Path([FVM_Cont("c")])), FVM_ContCall()];
 	  	ret_instrs := [FVM_Label(cont_name), FVM_Get(FVM_Path([FVM_SlotR()]))]
 	  	
-	compile-exp: List([func|args]) -> <concat> [func_prepare, func_args, call_func, func_body, return]
+	compile-exp: FunApp([func|args]) -> <concat> [func_prepare, func_args, call_func, func_body, return]
 	  where
 	  	func_name := $[LAMBDA_[<next-counter> "lamb"]];
 	  	cont_name := $[CONT_[<next-counter> "cont"]];

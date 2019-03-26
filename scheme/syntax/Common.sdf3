@@ -51,6 +51,7 @@ lexical syntax
 	ID   = "cond"              {reject}
 	ID   = "and"               {reject}
 	ID   = "or"                {reject}
+	ID   = "cons"              {reject}
 	ID   = "case"              {reject}
 	ID   = "let"               {reject}
 	ID   = "let*"              {reject}
@@ -59,6 +60,20 @@ lexical syntax
 	ID   = "delay"             {reject}
 	ID   = "quasiquote"        {reject}
 	ID   = "call-with-current-continuation" {reject}
+	
+	ID   = "abs"               {reject}
+	ID   = "sqrt"              {reject}
+	ID   = "not"               {reject}
+	ID   = "length"            {reject}
+	ID   = "car"               {reject}
+	ID   = "cdr"               {reject}
+	ID   = "number?"           {reject}
+	ID   = "integer?"          {reject}
+	ID   = "pair?"             {reject}
+	ID   = "symbol?"           {reject}
+	ID   = "boolean?"          {reject}
+	ID   = "string?"           {reject}
+	ID   = "null?"             {reject}
  
 	AbbPrefix = "'"
 	AbbPrefix = "`"
