@@ -49,7 +49,7 @@ rules
 	compile-exp: Conss(h, tail) -> <concat> [h_instr, new_cons, h_set, tail_instr, t_set]
 	  where
 	  	h_instr := <compile-exp> h;
-	  	new_cons := [FVM_New()];
+	  	new_cons := [FVM_New("2")];
 	  	h_set := [FVM_Dup(), FVM_SetR(FVM_Path([FVM_Slot("0")])), FVM_Dup()];
 	  	tail_instr := <compile-exp> tail;
 	  	t_set := [FVM_SetR(FVM_Path([FVM_Slot("1")]))]
@@ -70,7 +70,7 @@ rules
 	  	func_name := $[LAMBDA_[<next-counter> "lamb"]];
 	  	cont_name := $[CONT_[<next-counter> "cont"]];
 	  	
-	  	func_prepare := [FVM_New(), FVM_Dup(), FVM_Link(FVM_Self(), "P")];
+	  	func_prepare := [FVM_New(<int-to-string> <length> args), FVM_Dup(), FVM_Link(FVM_Self(), "P")];
 	  	func_args := <compile-args> args;
 	  	call_func := [FVM_Call(FVM_Label(func_name), FVM_Label(cont_name))];
 	  	func_body := <compile-func> (func, func_name);
@@ -81,7 +81,7 @@ rules
 	  	func_name := $[LAMBDA_[<next-counter> "lamb"]];
 	  	cont_name := $[CONT_[<next-counter> "cont"]];
 	  	
-	  	func_prep := [FVM_New(), FVM_Dup(), FVM_Link(FVM_Self(), "P"), FVM_ContNewR(FVM_Label(func_name)), FVM_Jump(FVM_Label(cont_name))];
+	  	func_prep := [FVM_New(<int-to-string> <length> args), FVM_Dup(), FVM_Link(FVM_Self(), "P"), FVM_ContNewR(FVM_Label(func_name)), FVM_Jump(FVM_Label(cont_name))];
 	  	func_body := <compile-func> (Lambda(args, body), func_name);
 	  	func_end := [FVM_Label(cont_name)]
 	
@@ -111,7 +111,7 @@ rules
 	  	cont_name := $[CONT_[<next-counter> "cont"]];
 	  		
 	  	make_cont := [FVM_Copy(), FVM_ContNewR(FVM_Label(precont_name))];
-	  	prep_func := [FVM_New(), FVM_Dup(), FVM_Link(FVM_Self(), "P")];
+	  	prep_func := [FVM_New("1"), FVM_Dup(), FVM_Link(FVM_Self(), "P")];
 	  	store_arg := [FVM_Dup(), FVM_SwapN("2"), FVM_SetR(FVM_Path([FVM_Slot("0")]))];
 	  	call_func := [FVM_Call(FVM_Label(func_name), FVM_Label(cont_name))];
 	  	func_body := <compile-func> (func, func_name);
@@ -140,7 +140,7 @@ rules
 	  where
 	  	let_name := $[LET_[<next-counter> "let"]];
 	  	cont_name := $[CONT_[<next-counter> "cont"]];
-	  	newframe := [FVM_New(), FVM_Dup(), FVM_Link(FVM_Self(), "P")];
+	  	newframe := [FVM_New(<int-to-string> <length> binds), FVM_Dup(), FVM_Link(FVM_Self(), "P")];
 	  	assign_args := <compile-args> binds;
 	  	scopedown := [FVM_Call(FVM_Label(let_name), FVM_Label(cont_name)), FVM_Label(let_name)];
 	  	body_stmts := <concat> [<concat> <seq-pop-all><map(compile-exp)> body, [FVM_Return()]];
