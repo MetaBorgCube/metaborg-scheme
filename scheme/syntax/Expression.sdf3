@@ -63,6 +63,9 @@ context-free syntax
 	BinOp.Sub = "-"
 	BinOp.Div = "/"
 	BinOp.Mul = "*"
+	
+	BinOp.SetCar = "set-car!"
+	BinOp.SetCdr = "set-cdr!"
 		
 	
 	Exp.Num = NUM

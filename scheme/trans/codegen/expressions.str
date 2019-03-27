@@ -9,6 +9,7 @@ imports
   signatures/Expression-sig
   
   codegen/-
+  desugar/desugar
 
 rules
 
@@ -25,6 +26,23 @@ rules
 	  	then_instr := [then, FVM_INeg(), FVM_Jump(else)]
 	  	
 	compile-unop: Not() -> [FVM_INeg()]
+	compile-unop: Car() -> [FVM_GetR(FVM_Path([FVM_Slot("0")]))]
+	compile-unop: Cdr() -> [FVM_GetR(FVM_Path([FVM_Slot("1")]))]
+	
+	  	
+	compile-exp: BinOp(SetCar(), e1, e2) -> <concat> [e1_instrs, res_instr, e2_instrs, binops]
+	  where
+	  	e1_instrs := <compile-exp> e1;
+	  	res_instr := [FVM_Dup(), FVM_GetR(FVM_Path([FVM_Slot("0")])), FVM_Swap()];
+	  	e2_instrs := <compile-exp> e2;
+	  	binops := [FVM_SetR(FVM_Path([FVM_Slot("0")]))]
+	  	
+	compile-exp: BinOp(SetCdr(), e1, e2) -> <concat> [e1_instrs, res_instr, e2_instrs, binops]
+	  where
+	  	e1_instrs := <compile-exp> e1;
+	  	res_instr := [FVM_Dup(), FVM_GetR(FVM_Path([FVM_Slot("1")])), FVM_Swap()];
+	  	e2_instrs := <compile-exp> e2;
+	  	binops := [FVM_SetR(FVM_Path([FVM_Slot("1")]))]
 	  	
 	compile-exp: BinOp(op, e1, e2) -> <concat> [e1_instrs, e2_instrs, binops]
 	  where
@@ -46,11 +64,11 @@ rules
 	compile-binop: Gte()  -> [FVM_DupN("2"), FVM_DupN("2"), FVM_IGt(), FVM_SwapN("2"), FVM_Swap(), FVM_IEq(), FVM_IOr()]
 	compile-binop: Lte()  -> [FVM_DupN("2"), FVM_DupN("2"), FVM_ILt(), FVM_SwapN("2"), FVM_Swap(), FVM_IEq(), FVM_IOr()]
 	
-	compile-exp: Conss(h, tail) -> <concat> [h_instr, new_cons, h_set, tail_instr, t_set]
+	compile-exp: Conss(h, tail) -> <concat> [new_cons, h_instr, h_set, tail_instr, t_set]
 	  where
+	  	new_cons := [FVM_New("2"), FVM_Dup()];
 	  	h_instr := <compile-exp> h;
-	  	new_cons := [FVM_New("2")];
-	  	h_set := [FVM_Dup(), FVM_SetR(FVM_Path([FVM_Slot("0")])), FVM_Dup()];
+	  	h_set := [FVM_SetR(FVM_Path([FVM_Slot("0")])), FVM_Dup()];
 	  	tail_instr := <compile-exp> tail;
 	  	t_set := [FVM_SetR(FVM_Path([FVM_Slot("1")]))]
 	  	

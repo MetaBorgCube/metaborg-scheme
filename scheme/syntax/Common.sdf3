@@ -47,6 +47,8 @@ lexical syntax
 	ID   = "lambda"            {reject}
 	ID   = "if"                {reject}
 	ID   = "set!"              {reject}
+	ID   = "set-car!"          {reject}
+	ID   = "set-cdr!"          {reject}
 	ID   = "begin"             {reject}
 	ID   = "cond"              {reject}
 	ID   = "and"               {reject}
