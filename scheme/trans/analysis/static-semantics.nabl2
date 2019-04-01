@@ -22,19 +22,18 @@ rules
   init ^ (s) := new s.
 
   [[ Program(expr) ^ (s) ]] :=
-    new m,
-    FoldExpr[[expr ^(m)]].
+    FoldExpr[[expr ^(s)]].
     
   FoldExpr[[ [] ^(_)]].
   
   FoldExpr [[ [Define(Bind(var, idx), val) | t] ^(p) ]] :=
 	new e, e ---> p,
 	Expr [[val ^(e)]],
-	new s, s ---> p,
-  	Var{var} <- s,
+	new d, d ---> p,
+  	Var{var} <- d,
   	Var{var}.index := idx,
-	distinct/name W(s)/Var | error $[Redefinition of variable [var], there must be a problem with desugaring] @var,
-  	FoldExpr [[t ^(s)]].
+	distinct/name W(d)/Var | error $[Redefinition of variable [var], there must be a problem with desugaring] @var,
+  	FoldExpr [[t ^(d)]].
   	
   FoldExpr [[ [Redefine(var, val) | t] ^(s) ]] :=
 	new e, e ---> s,
