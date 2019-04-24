@@ -17,5 +17,5 @@
 *.aterm
 *.value
 *.pp.scm
-*.fvm*
+*.stc*
 *.dot

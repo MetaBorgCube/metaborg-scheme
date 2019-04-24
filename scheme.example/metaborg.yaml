@@ -1,9 +1,9 @@
 ---
-id: org.example:scheme.example:0.1.0-SNAPSHOT
+id: org.metaborg.lang:scheme.example:0.1.0-SNAPSHOT
 name: scheme
 dependencies:
   compile:
-  - org.example:scheme:0.1.0-SNAPSHOT
+  - org.metaborg.lang:scheme:0.1.0-SNAPSHOT
 debug:
   typesmart: false
 runtime:

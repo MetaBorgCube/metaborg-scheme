@@ -1,5 +1,5 @@
 ---
-id: org.example:scheme:0.1.0-SNAPSHOT
+id: org.metaborg.lang:scheme:0.1.0-SNAPSHOT
 name: scheme
 dependencies:
   compile:
@@ -8,7 +8,7 @@ dependencies:
   - org.metaborg:org.metaborg.meta.nabl2.lang:${metaborgVersion}
   - org.metaborg:dynsem:${metaborgVersion}
   source:
-  - org.example:framevm:0.1.0-SNAPSHOT
+  - org.metaborg.lang:framevm-stacy:1.0.0
   - org.metaborg:meta.lib.spoofax:${metaborgVersion}
   - org.metaborg:org.metaborg.meta.nabl2.shared:${metaborgVersion}
   - org.metaborg:org.metaborg.meta.nabl2.runtime:${metaborgVersion}

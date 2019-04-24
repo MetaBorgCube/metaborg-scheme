@@ -6,24 +6,22 @@ imports
   pp
   
 imports
-  fvm-interpreter
-  fvm-pp
+  stc-common
   
 imports
   codegen/-
   desugar/-
-  signatures/framevm-sig
 
 rules
   
   compile-run:
     (node, _, _, path, project-path) -> (filename, result)
     with
-      filename := <guarantee-extension(|"fvm")> path
-    ; result   := <eval> <compile-to-fvm> <desugar> node
+      filename := <guarantee-extension(|"stc")> path
+    ; result   := <eval-framevm-stacy> <compile-to-fvm> <desugar> node
     
   compile:
     (node, _, _, path, project-path) -> (filename, result)
     with
-      filename := <guarantee-extension(|"fvm")> path
-    ; result   := <pp-framevm> <compile-to-fvm> <desugar> node
+      filename := <guarantee-extension(|"stc")> path
+    ; result   := <pp-framevm-stacy> <compile-to-fvm> <desugar> node
