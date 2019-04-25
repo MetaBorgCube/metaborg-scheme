@@ -18,78 +18,82 @@ rules
 	  	_ := <new-counter> "line"; 
 	  	_ := <new-counter> "cont"; 
 	  	_ := <new-counter> "let"; 
-	  	_ := <new-counter> "lamb"; 
-	  	_ := <new-counter> "prelamb"; 
+//	  	_ := <new-counter> "lamb"; 
+//	  	_ := <new-counter> "prelamb"; 
 	  	_ := <new-counter> "then"; 
 	  	_ := <new-counter> "else"; 
 	  	line_lbl := $[LINE_[<next-counter> "line"]];
 	  	linear_instr := <map(compile-topexp)> exprs;
-	  	fvm_init := [];
-//	  	fvm_init := ["0", FVM_ContAlias(FVM_Cont("n"), FVM_Cont("x")), FVM_New(), FVM_Dup(), FVM_Link(FVM_Self(), "Q"), FVM_Dup(), FVM_ContNewR(FVM_Label(line_lbl)), FVM_Set(FVM_Path([FVM_Cont("n")])), FVM_ScopeDown(FVM_Label(line_lbl)), FVM_Label(line_lbl)];
+	  	fvm_init := ["1", FVM_ContAlias(FVM_Cont("n"), "1"), FVM_LinkAlias(FVM_Link("Q"), "1"),
+	  		STC_New("0"), 
+	  		STC_Dup(), 
+	  		STC_Link(FVM_Self(), FVM_Link("Q")), 
+	  		STC_ContNew(FVM_Label(line_lbl), "1"), 
+	  		STC_Dup(), 
+	  		STC_Set(FVM_Path([FVM_Slot("0")])), 
+	  		
+	  		STC_Dup(),
+	  		STC_ContGet(FVM_Cont("c")),
+	  		STC_ContSetR(FVM_Cont("c")),
+	  		STC_ContCall(FVM_Label(line_lbl)),
+	  		FVM_Label(line_lbl)
+	  	];
 	  	fvm_exit := [STC_IPush("0"), STC_Return()] 
 	
 	line-init: _ -> (init, line_lbl)
 	  where
 	  	line_lbl := $[LINE_[<next-counter> "line"]];
-	  	init := []
-//	  	init := [FVM_ContNew(FVM_Label(line_lbl)), FVM_Set(FVM_Path([FVM_Link("Q"), FVM_Cont("n")]))]
+	  	init := [STC_New("0"), STC_Dup(), STC_Link(FVM_Path([FVM_Link("Q")]), FVM_Link("Q")), STC_ContNew(FVM_Label(line_lbl), "1"), STC_Dup(), STC_ContGet(FVM_Cont("c")), STC_ContSetR(FVM_Cont("c")), STC_Set(FVM_Path([FVM_Link("Q"), FVM_Slot("0")]))]
 	
-	next-line: lbl -> []
-//	next-line: lbl -> [FVM_Get(FVM_Path([FVM_Link("Q"), FVM_Cont("n")])), FVM_ContCall(), FVM_Label(lbl)]
+	next-line: lbl -> [STC_Get(FVM_Path([FVM_Link("Q"), FVM_Slot("0")])), STC_ContReturn(), FVM_Label(lbl)]
 	  	
-	scope-down: e -> []
-//	scope-down: e -> [FVM_New("0"), FVM_Dup(), FVM_Link(FVM_Self(), "P"), FVM_ScopeDown(FVM_Label(cont_name)), FVM_Label(cont_name)]
-	  where
-	  	cont_name := $[CONT_[<next-counter> "cont"]]
+	scope-down: e -> [STC_New("0"), STC_ScopeNew("P")]
 	  	
-	scope-up: e -> []
-//	scope-up: e -> [FVM_ScopeUp(FVM_Path([FVM_Link("P")]), FVM_Label(cont_name)), FVM_Label(cont_name)]
-	  where
-	  	cont_name := $[CONT_[<next-counter> "cont"]]
+	scope-up: e -> [STC_ScopeExit(FVM_Path([FVM_Link("P")]))]
 	  	
 	  	
 	  	
-	compile-topexp: Define(Bind(name, idx), val) -> <concat> [init, scopedownexp, val_instrs, set_instrs, scopeupexp, scope_instr, scopedown, init_newscope, set_instrs2, next_line]
-	  where
-	  	(init, lbl) := <line-init>;
-	  	scopedownexp := <scope-down>;
-	  	val_instrs := <compile-exp> val;
-	  	set_instrs := [];
-//	  	set_instrs := [FVM_Set(FVM_Path([FVM_Link("P"), FVM_SlotR()]))];
-	  	scopeupexp := <scope-up>;
-	  	
-	  	scope_instr := [STC_New("1"), STC_Dup(), STC_Link(FVM_Self(), "P"), STC_Dup(), STC_Link(FVM_Path([FVM_Link("Q")]), "Q")];
-	  	
-	  	cont_name := $[CONT_[<next-counter> "cont"]];
-	  	scopedown := [];
-//	  	scopedown := [FVM_ScopeDown(FVM_Label(cont_name))];
-	  	init_newscope := [];
-//	  	init_newscope := [FVM_Label(cont_name), FVM_ContNew(FVM_Label(lbl)), FVM_Set(FVM_Path([FVM_Link("Q"), FVM_Cont("n")]))];
-	  	
-	  	set_instrs2 := [];
-//	  	set_instrs2 := [FVM_Get(FVM_Path([FVM_Link("P"), FVM_SlotR()])), FVM_Set(FVM_Path([FVM_Slot(<int-to-string> idx)]))];
-	  	next_line := <next-line> lbl
-	  	
-	compile-topexp: Redefine(name, val) -> <concat> [init, scopedown, val_instrs, store_instr, scopeup, set_instrs, next_line]
-	  where
-	  	(init, lbl) := <line-init>;
-	  	scopedown := <scope-down>;
-	  	val_instrs := <compile-exp> val;
-	  	
-	  	store_instr := [];
-//	  	store_instr := [FVM_Set(FVM_Path([FVM_Link("P"), FVM_SlotR()]))];
-	  	scopeup := <scope-up>;
-	  	set_instrs := [];
-//	  	set_instrs := [FVM_Get(FVM_Path([FVM_SlotR()])), FVM_Set(<framevm-path-from-nabl2> (name, "Var", "index"))];
-	  	next_line := <next-line> lbl
+//	compile-topexp: Define(Bind(name, idx), val) -> <concat> [init, scopedownexp, val_instrs, set_instrs, scopeupexp, scope_instr, scopedown, init_newscope, set_instrs2, next_line]
+//	  where
+//	  	(init, lbl) := <line-init>;
+//	  	scopedownexp := <scope-down>;
+//	  	val_instrs := <compile-exp> val;
+//	  	set_instrs := [];
+////	  	set_instrs := [FVM_Set(FVM_Path([FVM_Link("P"), FVM_SlotR()]))];
+//	  	scopeupexp := <scope-up>;
+//	  	
+//	  	scope_instr := [STC_New("1"), STC_Dup(), STC_Link(FVM_Self(), "P"), STC_Dup(), STC_Link(FVM_Path([FVM_Link("Q")]), "Q")];
+//	  	
+//	  	cont_name := $[CONT_[<next-counter> "cont"]];
+//	  	scopedown := [];
+////	  	scopedown := [FVM_ScopeDown(FVM_Label(cont_name))];
+//	  	init_newscope := [];
+////	  	init_newscope := [FVM_Label(cont_name), FVM_ContNew(FVM_Label(lbl)), FVM_Set(FVM_Path([FVM_Link("Q"), FVM_Cont("n")]))];
+//	  	
+//	  	set_instrs2 := [];
+////	  	set_instrs2 := [FVM_Get(FVM_Path([FVM_Link("P"), FVM_SlotR()])), FVM_Set(FVM_Path([FVM_Slot(<int-to-string> idx)]))];
+//	  	next_line := <next-line> lbl
+//	  	
+//	compile-topexp: Redefine(name, val) -> <concat> [init, scopedown, val_instrs, store_instr, scopeup, set_instrs, next_line]
+//	  where
+//	  	(init, lbl) := <line-init>;
+//	  	scopedown := <scope-down>;
+//	  	val_instrs := <compile-exp> val;
+//	  	
+//	  	store_instr := [];
+////	  	store_instr := [FVM_Set(FVM_Path([FVM_Link("P"), FVM_SlotR()]))];
+//	  	scopeup := <scope-up>;
+//	  	set_instrs := [];
+////	  	set_instrs := [FVM_Get(FVM_Path([FVM_SlotR()])), FVM_Set(<framevm-path-from-nabl2> (name, "Var", "index"))];
+//	  	next_line := <next-line> lbl
 	
-	compile-topexp: Lambda(args, body) -> <concat> [init, scopedown, lambda, scopeup, next_line]
-	  where
-	  	(init, lbl) := <line-init>;
-	  	scopedown := <scope-down>;
-	  	lambda := <compile-exp> Lambda(args, body);
-	  	scopeup := <scope-up>;
-	  	next_line := <next-line> lbl
+//	compile-topexp: Lambda(args, body) -> <concat> [init, scopedown, lambda, scopeup, next_line]
+//	  where
+//	  	(init, lbl) := <line-init>;
+//	  	scopedown := <scope-down>;
+//	  	lambda := <compile-exp> Lambda(args, body);
+//	  	scopeup := <scope-up>;
+//	  	next_line := <next-line> lbl
 	
 	// Print results of the rest of the expressions
 	compile-topexp: e -> <concat> [init, scopedown, exp, [STC_Print()], scopeup, next_line]

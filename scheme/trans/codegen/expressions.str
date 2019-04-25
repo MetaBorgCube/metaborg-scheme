@@ -2,6 +2,7 @@ module expressions
 
 imports
   signatures/framevm-stacy-sig
+  signatures/fvm-common-sig
   stc-util
   
 imports
@@ -74,29 +75,29 @@ rules
 	  	
 	compile-exp: EmptyList() -> [STC_New()]
 	
-	compile-exp: FunApp([Ref(ref_name)|args]) -> <concat> [get_cont, unpack_cont, prep_args, call_func, ret_instrs]
-	  where
-	  	get_cont := <compile-exp> Ref(ref_name);
-	  	cont_name := $[CONT_[<next-counter> "cont"]];
-	  	unpack_cont := [];
-//	  	unpack_cont := [STC_Dup(), FVM_ContUnpack()];
-	  	prep_args := <compile-args> args;
-	  	call_func := [];
-//	  	call_func := [FVM_ContNew(FVM_Label(cont_name)), STC_SetR(FVM_Path([FVM_Cont("c")])), STC_ContCall()];
-	  	ret_instrs := []
-//	  	ret_instrs := [FVM_Label(cont_name), STC_Get(FVM_Path([FVM_SlotR()]))]
+//	compile-exp: FunApp([Ref(ref_name)|args]) -> <concat> [get_cont, unpack_cont, prep_args, call_func, ret_instrs]
+//	  where
+//	  	get_cont := <compile-exp> Ref(ref_name);
+//	  	cont_name := $[CONT_[<next-counter> "cont"]];
+//	  	unpack_cont := [];
+////	  	unpack_cont := [STC_Dup(), FVM_ContUnpack()];
+//	  	prep_args := <compile-args> args;
+//	  	call_func := [];
+////	  	call_func := [FVM_ContNew(FVM_Label(cont_name)), STC_SetR(FVM_Path([FVM_Cont("c")])), STC_ContCall()];
+//	  	ret_instrs := []
+////	  	ret_instrs := [FVM_Label(cont_name), STC_Get(FVM_Path([FVM_SlotR()]))]
 	  	
-	compile-exp: FunApp([func|args]) -> <concat> [func_prepare, func_args, call_func, func_body, return]
-	  where
-	  	func_name := $[LAMBDA_[<next-counter> "lamb"]];
-	  	cont_name := $[CONT_[<next-counter> "cont"]];
-	  	
-	  	func_prepare := [STC_New(<int-to-string> <length> args), STC_Dup(), STC_Link(FVM_Self(), "P")];
-	  	func_args := <compile-args> args;
-	  	call_func := [STC_Call(FVM_Label(func_name), FVM_Label(cont_name))];
-	  	func_body := <compile-func> (func, func_name);
-	  	return := []
-//	  	return := [STC_Label(cont_name), STC_Get(FVM_Path(FVM_SlotR()))]
+//	compile-exp: FunApp([func|args]) -> <concat> [func_prepare, func_args, call_func, func_body, return]
+//	  where
+//	  	func_name := $[LAMBDA_[<next-counter> "lamb"]];
+//	  	cont_name := $[CONT_[<next-counter> "cont"]];
+//	  	
+//	  	func_prepare := [STC_New(<int-to-string> <length> args), STC_Dup(), STC_Link(FVM_Self(), "P")];
+//	  	func_args := <compile-args> args;
+//	  	call_func := [STC_Call(FVM_Label(func_name), FVM_Label(cont_name))];
+//	  	func_body := <compile-func> (func, func_name);
+//	  	return := []
+////	  	return := [STC_Label(cont_name), STC_Get(FVM_Path(FVM_SlotR()))]
 	
 	compile-exp: Lambda(args, body) -> <concat> [func_prep, func_body, func_end]
 	  where
@@ -129,21 +130,21 @@ rules
 	  	exp_instr := <compile-exp> exp;
 	  	set_instr := [STC_SetR(FVM_Path(FVM_Slot(<int-to-string> <dec> idx)))]	// idx starts at 1 instead of 0, therefore decrement once
 	
-	compile-exp: Callcc(func) -> <concat> [make_cont, prep_func, store_arg, call_func, func_body, precont, return]
-	  where
-	  	func_name := $[LAMBDA_[<next-counter> "lamb"]];
-	  	precont_name := $[PRECONT_[<next-counter> "precont"]];
-	  	cont_name := $[CONT_[<next-counter> "cont"]];
-	  		
-	  	make_cont := [STC_ContCopy(FVM_DeepCopy(), FVM_ShallowCopy()), STC_ContNew(FVM_Label(precont_name), "2")];
-	  	prep_func := [STC_New("1"), STC_Dup(), STC_Link(FVM_Self(), "P")];
-	  	store_arg := [STC_Dup(), STC_SwapN("2"), STC_SetR(FVM_Path([FVM_Slot("0")]))];
-	  	call_func := [STC_Call(FVM_Label(func_name), FVM_Label(cont_name))];
-	  	func_body := <compile-func> (func, func_name);
-	  	precont   := [];
-//	  	precont   := [FVM_Label(precont_name), STC_Copy(), STC_Dup(), STC_Get(FVM_Path([FVM_Slot("0")])), STC_SetR(FVM_Path([FVM_SlotR()])), STC_ContNewR(FVM_Label(cont_name)), FVM_ContCall()];
-	  	return    := []
-//	  	return    := [FVM_Label(cont_name), STC_Get(FVM_Path([FVM_SlotR()]))]
+//	compile-exp: Callcc(func) -> <concat> [make_cont, prep_func, store_arg, call_func, func_body, precont, return]
+//	  where
+//	  	func_name := $[LAMBDA_[<next-counter> "lamb"]];
+//	  	precont_name := $[PRECONT_[<next-counter> "precont"]];
+//	  	cont_name := $[CONT_[<next-counter> "cont"]];
+//	  		
+//	  	make_cont := [STC_ContCopy(FVM_DeepCopy(), FVM_ShallowCopy()), STC_ContNew(FVM_Label(precont_name), "2")];
+//	  	prep_func := [STC_New("1"), STC_Dup(), STC_Link(FVM_Self(), "P")];
+//	  	store_arg := [STC_Dup(), STC_SwapN("2"), STC_SetR(FVM_Path([FVM_Slot("0")]))];
+//	  	call_func := [STC_Call(FVM_Label(func_name), FVM_Label(cont_name))];
+//	  	func_body := <compile-func> (func, func_name);
+//	  	precont   := [];
+////	  	precont   := [FVM_Label(precont_name), STC_Copy(), STC_Dup(), STC_Get(FVM_Path([FVM_Slot("0")])), STC_SetR(FVM_Path([FVM_SlotR()])), STC_ContNewR(FVM_Label(cont_name)), FVM_ContCall()];
+//	  	return    := []
+////	  	return    := [FVM_Label(cont_name), STC_Get(FVM_Path([FVM_SlotR()]))]
 
 	compile-exp: Ref(name) -> [STC_Get(fvm_path)]
 	  where
@@ -173,16 +174,16 @@ rules
 	  	then_instr := <concat> [[FVM_Label(then_lbl)], <compile-exp> then, [STC_Jump(cont_instr)]];
 	  	else_instr := <concat> [[FVM_Label(else_lbl)], <compile-exp> else, [STC_Jump(cont_instr)]]
 	  	 
-	compile-exp: Let(binds, body) -> <concat> [newframe, assign_args, scopedown, body_stmts, scopeup]
-	  where
-	  	let_name := $[LET_[<next-counter> "let"]];
-	  	cont_name := $[CONT_[<next-counter> "cont"]];
-	  	newframe := [STC_New(<int-to-string> <length> binds), STC_Dup(), STC_Link(FVM_Self(), "P")];
-	  	assign_args := <compile-args> binds;
-	  	scopedown := [STC_Call(FVM_Label(let_name), FVM_Label(cont_name)), FVM_Label(let_name)];
-	  	body_stmts := <concat> [<concat> <seq-pop-all><map(compile-exp)> body, [STC_Return()]];
-		scopeup := []
-//	  	scopeup := [FVM_Label(cont_name), STC_Get(FVM_Path([FVM_SlotR()]))]
+//	compile-exp: Let(binds, body) -> <concat> [newframe, assign_args, scopedown, body_stmts, scopeup]
+//	  where
+//	  	let_name := $[LET_[<next-counter> "let"]];
+//	  	cont_name := $[CONT_[<next-counter> "cont"]];
+//	  	newframe := [STC_New(<int-to-string> <length> binds), STC_Dup(), STC_Link(FVM_Self(), "P")];
+//	  	assign_args := <compile-args> binds;
+//	  	scopedown := [STC_Call(FVM_Label(let_name), FVM_Label(cont_name)), FVM_Label(let_name)];
+//	  	body_stmts := <concat> [<concat> <seq-pop-all><map(compile-exp)> body, [STC_Return()]];
+//		scopeup := []
+////	  	scopeup := [FVM_Label(cont_name), STC_Get(FVM_Path([FVM_SlotR()]))]
 	  	
 	
 	compile-exp: Bool("#f") -> [STC_IPush("0")]
