@@ -43,9 +43,38 @@ rules
 	line-init: _ -> (init, line_lbl)
 	  where
 	  	line_lbl := $[LINE_[<next-counter> "line"]];
-	  	init := [STC_New("0"), STC_Dup(), STC_Link(FVM_Path([FVM_Link("Q")]), FVM_Link("Q")), STC_ContNew(FVM_Label(line_lbl), "1"), STC_Dup(), STC_ContGet(FVM_Cont("c")), STC_ContSetR(FVM_Cont("c")), STC_Set(FVM_Path([FVM_Link("Q"), FVM_Slot("0")]))]
+	  	init := [
+	  		STC_Get(FVM_Self()),
+	  		STC_ContNew(FVM_Label(line_lbl), "1"), 
+	  		STC_Dup(), 
+	  		STC_ContGet(FVM_Cont("c")), 
+	  		STC_ContSetR(FVM_Cont("c")), 
+	  		STC_Set(FVM_Path([FVM_Link("Q"), 
+	  		FVM_Slot("0")]))
+	  	]
+	  	
+	line-init-assign: _ -> (init, line_lbl)
+	  where
+	  	line_lbl := $[LINE_[<next-counter> "line"]];
+	  	init := [
+	  		STC_New("1"), 
+	  		STC_Dup(), 
+	  		STC_Link(FVM_Path([FVM_Link("Q")]), FVM_Link("Q")), 
+	  		STC_Dup(),
+	  		STC_ContNew(FVM_Label(line_lbl), "1"), 
+	  		STC_Dup(), 
+	  		STC_ContGet(FVM_Cont("c")), 
+	  		STC_ContSetR(FVM_Cont("c")), 
+	  		STC_Set(FVM_Path([FVM_Link("Q"), 
+	  		FVM_Slot("0")]))
+	  	]
 	
-	next-line: lbl -> [STC_Get(FVM_Path([FVM_Link("Q"), FVM_Slot("0")])), STC_ContReturn(), FVM_Label(lbl)]
+	next-line: lbl -> [
+		STC_Get(FVM_Path([FVM_Link("Q"), 
+		FVM_Slot("0")])), 
+		STC_ContReturn(), 
+		FVM_Label(lbl)
+	]
 	  	
 	scope-down: e -> [STC_New("0"), STC_ScopeNew("P")]
 	  	
@@ -53,26 +82,15 @@ rules
 	  	
 	  	
 	  	
-//	compile-topexp: Define(Bind(name, idx), val) -> <concat> [init, scopedownexp, val_instrs, set_instrs, scopeupexp, scope_instr, scopedown, init_newscope, set_instrs2, next_line]
-//	  where
-//	  	(init, lbl) := <line-init>;
-//	  	scopedownexp := <scope-down>;
-//	  	val_instrs := <compile-exp> val;
-//	  	set_instrs := [];
-////	  	set_instrs := [FVM_Set(FVM_Path([FVM_Link("P"), FVM_SlotR()]))];
-//	  	scopeupexp := <scope-up>;
-//	  	
-//	  	scope_instr := [STC_New("1"), STC_Dup(), STC_Link(FVM_Self(), "P"), STC_Dup(), STC_Link(FVM_Path([FVM_Link("Q")]), "Q")];
-//	  	
-//	  	cont_name := $[CONT_[<next-counter> "cont"]];
-//	  	scopedown := [];
-////	  	scopedown := [FVM_ScopeDown(FVM_Label(cont_name))];
-//	  	init_newscope := [];
-////	  	init_newscope := [FVM_Label(cont_name), FVM_ContNew(FVM_Label(lbl)), FVM_Set(FVM_Path([FVM_Link("Q"), FVM_Cont("n")]))];
-//	  	
-//	  	set_instrs2 := [];
-////	  	set_instrs2 := [FVM_Get(FVM_Path([FVM_Link("P"), FVM_SlotR()])), FVM_Set(FVM_Path([FVM_Slot(<int-to-string> idx)]))];
-//	  	next_line := <next-line> lbl
+	compile-topexp: Define(Bind(name, idx), val) -> <concat> [init, scopedownexp, val_instrs, scopeupexp, scope_instr, next_line]
+	  where
+	  	(init, lbl) := <line-init-assign>;
+	  	scopedownexp := <scope-down>;
+	  	val_instrs := <compile-exp> val;
+	  	scopeupexp := <scope-up>;
+	  	
+	  	scope_instr := [STC_Swap(), STC_ScopeSetCurrent(), STC_Set(FVM_Path([FVM_Slot("0")]))];
+	  	next_line := <next-line> lbl
 //	  	
 //	compile-topexp: Redefine(name, val) -> <concat> [init, scopedown, val_instrs, store_instr, scopeup, set_instrs, next_line]
 //	  where
