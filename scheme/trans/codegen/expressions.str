@@ -167,16 +167,13 @@ rules
 	  	then_instr := <concat> [[FVM_Label(then_lbl)], <compile-exp> then, [STC_Jump(cont_instr)]];
 	  	else_instr := <concat> [[FVM_Label(else_lbl)], <compile-exp> else, [STC_Jump(cont_instr)]]
 	  	 
-//	compile-exp: Let(binds, body) -> <concat> [newframe, assign_args, scopedown, body_stmts, scopeup]
-//	  where
-//	  	let_name := $[LET_[<next-counter> "let"]];
-//	  	cont_name := $[CONT_[<next-counter> "cont"]];
-//	  	newframe := [STC_New(<int-to-string> <length> binds), STC_Dup(), STC_Link(FVM_Self(), "P")];
-//	  	assign_args := <compile-args> binds;
-//	  	scopedown := [STC_Call(FVM_Label(let_name), FVM_Label(cont_name)), FVM_Label(let_name)];
-//	  	body_stmts := <concat> [<concat> <seq-pop-all><map(compile-exp)> body, [STC_Return()]];
-//		scopeup := []
-////	  	scopeup := [FVM_Label(cont_name), STC_Get(FVM_Path([FVM_SlotR()]))]
+	compile-exp: Let(binds, body) -> <concat> [newframe, assign_args, scopedown, body_stmts, scopeup]
+	  where
+	  	newframe := [STC_New(<int-to-string> <length> binds)];
+	  	assign_args := <compile-args> binds;
+	  	scopedown := [STC_ScopeNew(FVM_Link("P"))];
+	  	body_stmts := <concat> <seq-pop-all><map(compile-exp)> body;
+		scopeup := [STC_ScopeExit(FVM_Path([FVM_Link("P")]))]
 	  	
 	
 	compile-exp: Bool("#f") -> [STC_IPush("0")]

@@ -16,9 +16,8 @@ rules
 	compile-to-fvm: Program(exprs) -> <stc-from-flat> <concat> [fvm_init, <concat> linear_instr, fvm_exit]
 	  where
 	  	_ := <new-counter> "line"; 
-	  	_ := <new-counter> "cont"; 
-	  	_ := <new-counter> "let"; 
-//	  	_ := <new-counter> "lamb"; 
+	  	_ := <new-counter> "cont";
+	  	_ := <new-counter> "lamb"; 
 //	  	_ := <new-counter> "prelamb"; 
 	  	_ := <new-counter> "then"; 
 	  	_ := <new-counter> "else"; 
