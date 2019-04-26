@@ -75,29 +75,21 @@ rules
 	  	
 	compile-exp: EmptyList() -> [STC_New()]
 	
-//	compile-exp: FunApp([Ref(ref_name)|args]) -> <concat> [get_cont, unpack_cont, prep_args, call_func, ret_instrs]
-//	  where
-//	  	get_cont := <compile-exp> Ref(ref_name);
-//	  	cont_name := $[CONT_[<next-counter> "cont"]];
-//	  	unpack_cont := [];
-////	  	unpack_cont := [STC_Dup(), FVM_ContUnpack()];
-//	  	prep_args := <compile-args> args;
-//	  	call_func := [];
-////	  	call_func := [FVM_ContNew(FVM_Label(cont_name)), STC_SetR(FVM_Path([FVM_Cont("c")])), STC_ContCall()];
-//	  	ret_instrs := []
-////	  	ret_instrs := [FVM_Label(cont_name), STC_Get(FVM_Path([FVM_SlotR()]))]
-	  	
-//	compile-exp: FunApp([func|args]) -> <concat> [func_prepare, func_args, call_func, func_body, return]
-//	  where
-//	  	func_name := $[LAMBDA_[<next-counter> "lamb"]];
-//	  	cont_name := $[CONT_[<next-counter> "cont"]];
-//	  	
-//	  	func_prepare := [STC_New(<int-to-string> <length> args), STC_Dup(), STC_Link(FVM_Self(), "P")];
-//	  	func_args := <compile-args> args;
-//	  	call_func := [STC_Call(FVM_Label(func_name), FVM_Label(cont_name))];
-//	  	func_body := <compile-func> (func, func_name);
-//	  	return := []
-////	  	return := [STC_Label(cont_name), STC_Get(FVM_Path(FVM_SlotR()))]
+	compile-exp: FunApp([func|args]) -> <concat> [func_get, func_unpack, func_args, call_func, return]
+	  where
+	  	cont_name := $[CONT_[<next-counter> "cont"]];
+	  	func_get := <compile-exp> func;
+	  	func_unpack := [STC_Dup(), STC_ClosUnpack()];
+	  	func_args := <compile-args> args;
+	  	call_func := [
+	  		STC_Pop(), 
+	  		STC_ClosToCont("1"), 
+	  		STC_Dup(), 
+	  		STC_ContThis(), 
+	  		STC_ContSetR(FVM_Cont("c")), 
+	  		STC_ContCall(FVM_Label(cont_name))
+	  	];
+	  	return := [FVM_Label(cont_name), STC_ContRGet()]
 	
 	compile-exp: Lambda(args, body) -> <concat> [func_prep, func_body, func_end]
 	  where
@@ -105,8 +97,9 @@ rules
 	  	cont_name := $[CONT_[<next-counter> "cont"]];
 	  	
 	  	func_prep := [STC_New(<int-to-string> <length> args), 
-	  				  STC_Dup(), STC_Link(FVM_Self(), "P"), 
-	  				  STC_ContNew(FVM_Label(func_name), "2"), 
+	  				  STC_Dup(), 
+	  				  STC_Link(FVM_Self(), "P"), 
+	  				  STC_ClosNew(FVM_Label(func_name)), 
 	  				  STC_Jump(FVM_Label(cont_name))];
 	  	func_body := <compile-func> (Lambda(args, body), func_name);
 	  	func_end := [FVM_Label(cont_name)]
@@ -128,7 +121,7 @@ rules
 	compile-arg: (idx, exp) -> <concat> [[STC_Dup()], exp_instr , set_instr]
 	  where
 	  	exp_instr := <compile-exp> exp;
-	  	set_instr := [STC_SetR(FVM_Path(FVM_Slot(<int-to-string> <dec> idx)))]	// idx starts at 1 instead of 0, therefore decrement once
+	  	set_instr := [STC_SetR(FVM_Path([FVM_Slot(<int-to-string> <dec> idx)]))]	// idx starts at 1 instead of 0, therefore decrement once
 	
 //	compile-exp: Callcc(func) -> <concat> [make_cont, prep_func, store_arg, call_func, func_body, precont, return]
 //	  where

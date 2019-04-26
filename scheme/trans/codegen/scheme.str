@@ -60,18 +60,18 @@ rules
 	  		STC_New("1"), 
 	  		STC_Dup(), 
 	  		STC_Link(FVM_Path([FVM_Link("Q")]), FVM_Link("Q")), 
+	  		STC_Dup(), 
+	  		STC_Link(FVM_Self(), FVM_Link("P")), 
 	  		STC_Dup(),
 	  		STC_ContNew(FVM_Label(line_lbl), "1"), 
 	  		STC_Dup(), 
 	  		STC_ContGet(FVM_Cont("c")), 
 	  		STC_ContSetR(FVM_Cont("c")), 
-	  		STC_Set(FVM_Path([FVM_Link("Q"), 
-	  		FVM_Slot("0")]))
+	  		STC_Set(FVM_Path([FVM_Link("Q"), FVM_Slot("0")]))
 	  	]
 	
 	next-line: lbl -> [
-		STC_Get(FVM_Path([FVM_Link("Q"), 
-		FVM_Slot("0")])), 
+		STC_Get(FVM_Path([FVM_Link("Q"), FVM_Slot("0")])), 
 		STC_ContReturn(), 
 		FVM_Label(lbl)
 	]
@@ -91,27 +91,24 @@ rules
 	  	
 	  	scope_instr := [STC_Swap(), STC_ScopeSetCurrent(), STC_Set(FVM_Path([FVM_Slot("0")]))];
 	  	next_line := <next-line> lbl
-//	  	
-//	compile-topexp: Redefine(name, val) -> <concat> [init, scopedown, val_instrs, store_instr, scopeup, set_instrs, next_line]
-//	  where
-//	  	(init, lbl) := <line-init>;
-//	  	scopedown := <scope-down>;
-//	  	val_instrs := <compile-exp> val;
-//	  	
-//	  	store_instr := [];
-////	  	store_instr := [FVM_Set(FVM_Path([FVM_Link("P"), FVM_SlotR()]))];
-//	  	scopeup := <scope-up>;
-//	  	set_instrs := [];
-////	  	set_instrs := [FVM_Get(FVM_Path([FVM_SlotR()])), FVM_Set(<framevm-path-from-nabl2> (name, "Var", "index"))];
-//	  	next_line := <next-line> lbl
+	  	
+	compile-topexp: Redefine(name, val) -> <concat> [init, scopedown, val_instrs, scopeup, set_instrs, next_line]
+	  where
+	  	(init, lbl) := <line-init>;
+	  	scopedown := <scope-down>;
+	  	val_instrs := <compile-exp> val;
+	  	scopeup := <scope-up>;
+	  	
+	  	set_instrs := [STC_Set(<framevm-path-from-nabl2> (name, "Var", "index"))];
+	  	next_line := <next-line> lbl
 	
-//	compile-topexp: Lambda(args, body) -> <concat> [init, scopedown, lambda, scopeup, next_line]
-//	  where
-//	  	(init, lbl) := <line-init>;
-//	  	scopedown := <scope-down>;
-//	  	lambda := <compile-exp> Lambda(args, body);
-//	  	scopeup := <scope-up>;
-//	  	next_line := <next-line> lbl
+	compile-topexp: Lambda(args, body) -> <concat> [init, scopedown, lambda, scopeup, [STC_Pop()], next_line]
+	  where
+	  	(init, lbl) := <line-init>;
+	  	scopedown := <scope-down>;
+	  	lambda := <compile-exp> Lambda(args, body);
+	  	scopeup := <scope-up>;
+	  	next_line := <next-line> lbl
 	
 	// Print results of the rest of the expressions
 	compile-topexp: e -> <concat> [init, scopedown, exp, [STC_Print()], scopeup, next_line]
