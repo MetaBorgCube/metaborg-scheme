@@ -13,7 +13,7 @@ imports
   desugar/-
 
 rules
-	compile-to-fvm: Program(exprs) -> <stc-from-flat> <concat> [fvm_init, <concat> linear_instr, fvm_exit]
+	compile-to-fvm: Program(exprs) -> <stc-from-flat> (FVM_Header(fvm_header), <concat> [fvm_init, <concat> linear_instr, fvm_exit])
 	  where
 	  	_ := <new-counter> "line"; 
 	  	_ := <new-counter> "cont";
@@ -23,7 +23,8 @@ rules
 	  	_ := <new-counter> "else"; 
 	  	line_lbl := $[LINE_[<next-counter> "line"]];
 	  	linear_instr := <map(compile-topexp)> exprs;
-	  	fvm_init := ["1", FVM_ContAlias(FVM_Cont("n"), "1"), FVM_LinkAlias(FVM_Link("Q"), "1"),
+	  	fvm_header := [FVM_InitSize("1"), FVM_ContAlias(FVM_Cont("n"), "1"), FVM_LinkAlias(FVM_Link("Q"), "1")];
+	  	fvm_init := [
 	  		STC_New("0"), 
 	  		STC_Dup(), 
 	  		STC_Link(FVM_Self(), FVM_Link("Q")), 
