@@ -23,6 +23,12 @@
       <version>0.1.0-SNAPSHOT</version>
       <type>spoofax-language</type>
     </dependency>
+    <dependency>
+      <groupId>org.metaborg.lang</groupId>
+      <artifactId>framevm-stacy</artifactId>
+      <version>1.0.0</version>
+      <type>spoofax-language</type>
+    </dependency>
   </dependencies>
   
   <repositories>
