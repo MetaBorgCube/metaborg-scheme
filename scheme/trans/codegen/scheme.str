@@ -1,7 +1,7 @@
 module scheme
 
 imports
-  signatures/framevm-stacy-sig
+  signatures/fvm-stacy-sig
   signatures/fvm-common-sig
   stc-util
   

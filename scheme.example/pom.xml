@@ -25,7 +25,7 @@
     </dependency>
     <dependency>
       <groupId>org.metaborg.lang</groupId>
-      <artifactId>framevm-stacy</artifactId>
+      <artifactId>framevm</artifactId>
       <version>1.0.0</version>
       <type>spoofax-language</type>
     </dependency>

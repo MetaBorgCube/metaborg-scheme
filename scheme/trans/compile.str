@@ -6,7 +6,7 @@ imports
   pp
   
 imports
-  stc-common
+  fvm-common
   
 imports
   codegen/-
@@ -18,10 +18,10 @@ rules
     (node, _, _, path, project-path) -> (filename, result)
     with
       filename := <guarantee-extension(|"stc")> path
-    ; result   := <eval-framevm-stacy> <compile-to-fvm> <desugar> node
+    ; result   := <eval-framevm> <compile-to-fvm> <desugar> node
     
   compile:
     (node, _, _, path, project-path) -> (filename, result)
     with
       filename := <guarantee-extension(|"stc")> path
-    ; result   := <pp-framevm-stacy> <compile-to-fvm> <desugar> node
+    ; result   := <pp-framevm> <compile-to-fvm> <desugar> node
