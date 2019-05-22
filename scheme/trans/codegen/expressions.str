@@ -83,7 +83,7 @@ rules
 	  	func_args := <compile-args> args;
 	  	call_func := [
 	  		STC_Pop(), 
-	  		STC_ClosToCont("1"), 
+	  		STC_ClosToCont(), 
 	  		STC_Dup(), 
 	  		STC_ContThis(), 
 	  		STC_ContSetR(FVM_Cont("c")), 
@@ -99,7 +99,7 @@ rules
 	  	func_prep := [STC_New(<int-to-string> <length> args), 
 	  				  STC_Dup(), 
 	  				  STC_Link(FVM_Self(), "P"), 
-	  				  STC_ClosNew(FVM_Label(func_name)), 
+	  				  STC_ClosNew(FVM_Label(func_name), "1"), 
 	  				  STC_Jump(FVM_Label(cont_name))];
 	  	func_body := <compile-func> (Lambda(args, body), func_name);
 	  	func_end := [FVM_Label(cont_name)]
