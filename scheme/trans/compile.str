@@ -17,8 +17,8 @@ rules
   compile-run:
     (node, _, _, path, project-path) -> (filename, result)
     with
-      filename := <guarantee-extension(|"stc")> path
-    ; result   := <eval-framevm> <compile-to-fvm> <desugar> node
+      filename := <guarantee-extension(|"value")> path
+    ; result   := <eval-framevm> <debug> <compile-to-fvm> <desugar> node
     
   compile:
     (node, _, _, path, project-path) -> (filename, result)

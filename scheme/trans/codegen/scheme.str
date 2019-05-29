@@ -36,7 +36,7 @@ rules
 	  		STC_ContGet(FVM_Cont("c")),
 	  		STC_ContSetR(FVM_Cont("c")),
 	  		STC_ContCall(FVM_Label(line_lbl)),
-	  		FVM_Label(line_lbl)
+	  		(FVM_Label(line_lbl), 99)
 	  	];
 	  	fvm_exit := [STC_IPush("0"), STC_Return()] 
 	
@@ -73,7 +73,7 @@ rules
 	next-line: lbl -> [
 		STC_Get(FVM_Path([FVM_Link("Q"), FVM_Slot("0")])), 
 		STC_ContReturn(), 
-		FVM_Label(lbl)
+		(FVM_Label(lbl), 99)
 	]
 	  	
 	scope-down: e -> [STC_New("0"), STC_ScopeNew("P")]

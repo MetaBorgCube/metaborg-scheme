@@ -89,7 +89,7 @@ rules
 	  		STC_ContSetR(FVM_Cont("c")), 
 	  		STC_ContCall(FVM_Label(cont_name))
 	  	];
-	  	return := [FVM_Label(cont_name), STC_ContRGet()]
+	  	return := [(FVM_Label(cont_name), 99), STC_ContRGet()]
 	
 	compile-exp: Lambda(args, body) -> <concat> [func_prep, func_body, func_end]
 	  where
@@ -104,7 +104,7 @@ rules
 	  	func_body := <compile-func> (Lambda(args, body), func_name);
 	  	func_end := [FVM_Label(cont_name)]
 	
-	compile-func: (Lambda(_, body), name) -> [FVM_Label(name) | body_stmts]
+	compile-func: (Lambda(_, body), name) -> [(FVM_Label(name), 99) | body_stmts]
 	  where
 	  	body_stmts := <concat> [<concat> <seq-pop-all><map(compile-exp)> body, [STC_Return()]]
 	  	
