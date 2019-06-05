@@ -3,7 +3,7 @@ module scheme
 imports
   signatures/fvm-stacy-sig
   signatures/fvm-common-sig
-  stc-util
+  fvm-util
   
 imports
   signatures/scheme-sig
