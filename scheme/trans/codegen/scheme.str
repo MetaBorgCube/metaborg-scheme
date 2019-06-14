@@ -1,7 +1,7 @@
 module scheme
 
 imports
-  signatures/fvm-stacy-sig
+  signatures/fvm-roger-sig
   signatures/fvm-common-sig
   fvm-util
   
@@ -9,114 +9,530 @@ imports
   signatures/scheme-sig
   signatures/Expression-sig
   
-  codegen/-
   desugar/-
 
-rules
-	compile-to-fvm: Program(exprs) -> <stc-from-flat> (FVM_Header(fvm_header), <concat> [fvm_init, <concat> linear_instr, fvm_exit])
+imports
+  nabl2/api
+
+signature
+  sorts DNX
+  constructors    
+    DNX_AssignVar : STRING -> DNX
+    
+    DNX_TemplateVar     : STRING -> DNX
+    DNX_TemplateVarInit : STRING -> DNX
+    DNX_TemplateVarLast : STRING -> DNX
+
+rules // Dynamix library functions
+    dnx-fold-template: ((from, to), ast) -> <topdown(try(dnx-fold-template-replace(|from, to)))>
+    dnx-fold-template-replace(|from, to): from -> to
+    
+    dnx-fill-assign-wildcards: flat_ast -> <foldl(dnx-fill-assign-wildcards-fold)> (flat_ast, ([], []))
+    dnx-fill-assign-wildcards-fold: (instr, (ast, binds)) -> (<concat> [ast', [instr]], binds) where ast':= <topdown(try(dnx-replace-assign-wildcards(|binds)))> instr
+    dnx-replace-assign-wildcards(|binds): DNX_AssignVar(name) -> <dnx-lookup-assign> (name, binds)
+    dnx-lookup-assign: (name, []) -> <debug; fail> $[Bind not found [name]]
+    dnx-lookup-assign: (name, [(name, val) | _]) -> val
+    dnx-lookup-assign: (name, [_ | binds]) -> <dnx-lookup-assign> (name, binds) 
+    
+    dnx-sequence(s): exps -> <flatten-list; mapconcat(s)> <debug> <map(s)> exps
+    dnx-next-assign-var: _ -> DNX_AssignVar(<newname> "v_")
+    
+    dnx-execute-in-scope(|lbl, size): term -> <flatten-list> [RGR_ScopeNew(RGR_New(<int-to-string> size), FVM_Link(lbl)), term, RGR_ScopeExit(FVM_Path([FVM_Link(lbl)]))]
+  
+    dnx-apply-template(|args): (template, labels) -> <debug> templated
+      with
+        <debug> (template, labels);
+	    labels_map := <zip>(labels, <map(newname)> labels);
+	    templated := <foldl(dnx-fold-template)> <debug>(<concat> [labels_map], template)
+        
+    dnx-frame-store(compile-s| frame): args -> <flatten-list> [store_instrs, stored_exps]
+      with
+        (store_instrs, store_exps) := <unzip> <map(<split-init-last> <compile-s>)> args;
+        stored_exps := <map(\exp -> RGR_Set(frame, exp)\)> store_exps
+    
+    dnx-assign-sequence(compile-s): exps -> <dnx-exp-sequence-with(compile-s, \c -> RGR_Assign(var, c)\)> with var := <dnx-next-assign-var>
+    dnx-exp-sequence-with(compile-s, s): exps -> (<flatten-list> [init_instrs, last_instr], last_exp)
+      with
+        (init, last) := <split-init-last> exps;
+	    (init_instr, init_exp) := <unzip> <map(compile-s; split-init-last)> init;	
+	    init_instrs := <flatten-list> <zip> (init_instr, <map(s)> init_exp);
+	    (last_instr, last_exp) := <compile-s> last
+
+
+rules // Toplevel rule
+	compile-to-fvm: ast -> ast'
+	  with
+	    initial_scope_size := 1;
+	    header := [FVM_InitSize(<int-to-string> initial_scope_size), FVM_ContAlias(FVM_Cont("n"), "1"), FVM_LinkAlias(FVM_Link("Q"), "1")]
 	  where
-	  	_ := <new-counter> "line"; 
-	  	_ := <new-counter> "cont";
-	  	_ := <new-counter> "lamb"; 
-//	  	_ := <new-counter> "prelamb"; 
-	  	_ := <new-counter> "then"; 
-	  	_ := <new-counter> "else"; 
-	  	line_lbl := $[LINE_[<next-counter> "line"]];
-	  	linear_instr := <map(compile-topexp)> exprs;
-	  	fvm_header := [FVM_InitSize("1"), FVM_ContAlias(FVM_Cont("n"), "1"), FVM_LinkAlias(FVM_Link("Q"), "1")];
-	  	fvm_init := [
-	  		STC_New("0"), 
-	  		STC_Dup(), 
-	  		STC_Link(FVM_Self(), FVM_Link("Q")), 
-	  		STC_ContNew(FVM_Label(line_lbl), "1"), 
-	  		STC_Dup(), 
-	  		STC_Set(FVM_Path([FVM_Slot("0")])), 
+	    flat_ast := <compile-init> ast;
+	    ast':=  <dnx-fill-assign-wildcards> <rgr-from-flat> (FVM_Header(header), flat_ast) 
+
+	   
+rules // Imported templates
+	template-std-exit-ok: args -> <dnx-apply-template(|args)> (template, labels)
+	  with
+	    labels := [];
+	    template := [
+	  		RGR_ILoad("0")
+	    ]
+	    
+    template-std-if: args -> <dnx-apply-template(|args)> (template, labels)
+	  with
+	    labels := ["THEN", "ELSE", "CONT"];
+	    template := [
+	  		RGR_JumpZ(DNX_TemplateVar(0), FVM_Label("ELSE"), FVM_Label("THEN")),
 	  		
-	  		STC_Dup(),
-	  		STC_ContGet(FVM_Cont("c")),
-	  		STC_ContSetR(FVM_Cont("c")),
-	  		STC_ContCall(FVM_Label(line_lbl)),
-	  		(FVM_Label(line_lbl), 99)
-	  	];
-	  	fvm_exit := [STC_IPush("0"), STC_Return()] 
-	
-	line-init: _ -> (init, line_lbl)
-	  where
-	  	line_lbl := $[LINE_[<next-counter> "line"]];
-	  	init := [
-	  		STC_Get(FVM_Self()),
-	  		STC_ContNew(FVM_Label(line_lbl), "1"), 
-	  		STC_Dup(), 
-	  		STC_ContGet(FVM_Cont("c")), 
-	  		STC_ContSetR(FVM_Cont("c")), 
-	  		STC_Set(FVM_Path([FVM_Link("Q"), 
-	  		FVM_Slot("0")]))
+	  		FVM_Label("THEN"),
+	  		DNX_TemplateVar(1),
+	  		RGR_Jump(FVM_Label("CONT")),
+	  		
+	  		FVM_Label("ELSE"),
+	  		DNX_TemplateVar(2),
+	  		RGR_Jump(FVM_Label("CONT")),
+	  		
+	  		FVM_Label("CONT")
+	    ]
+	    
+	template-std-exp-if: args -> <dnx-apply-template(|args)> (template, labels)
+	  with
+	    labels := ["THEN", "ELSE", "CONT"];
+	    template := [
+	  		RGR_JumpZ(DNX_TemplateVar(0), FVM_Label("ELSE"), FVM_Label("THEN")),
+	  		
+	  		FVM_Label("THEN"),
+	  		DNX_TemplateVarInit(1),
+	  		RGR_Assign(DNX_AssignVar("a"), DNX_TemplateVarLast(1)),
+	  		RGR_Jump(FVM_Label("CONT")),
+	  		
+	  		FVM_Label("ELSE"),
+	  		DNX_TemplateVarInit(2),
+	  		RGR_Assign(DNX_AssignVar("a"), DNX_TemplateVarLast(2)),
+	  		RGR_Jump(FVM_Label("CONT")),
+	  		
+	  		FVM_Label("CONT"),
+	  		DNX_AssignVar("a")
+	    ]
+	    
+	template-std-ineg: args -> <dnx-apply-template(|args)> (template, [])
+	  with
+	    template := [
+	  		RGR_INeg(DNX_TemplateVar(0))
+	    ]
+	    
+	template-std-iadd: args -> <dnx-apply-template(|args)> (template, [])
+	  with
+	    template := [
+	  		RGR_IAdd(DNX_TemplateVar(0), DNX_TemplateVar(1))
+	    ]
+	    
+	template-std-isub: args -> <dnx-apply-template(|args)> (template, [])
+	  with
+	    template := [
+	  		RGR_ISub(DNX_TemplateVar(0), DNX_TemplateVar(1))
+	    ]
+	    
+	template-std-imul: args -> <dnx-apply-template(|args)> (template, [])
+	  with
+	    template := [
+	  		RGR_IMul(DNX_TemplateVar(0), DNX_TemplateVar(1))
+	    ]
+	    
+	template-std-idiv: args -> <dnx-apply-template(|args)> (template, [])
+	  with
+	    template := [
+	  		RGR_IDiv(DNX_TemplateVar(0), DNX_TemplateVar(1))
+	    ]
+	    
+	template-std-ilt: args -> <dnx-apply-template(|args)> (template, [])
+	  with
+	    template := [
+	  		RGR_ILt(DNX_TemplateVar(0), DNX_TemplateVar(1))
+	    ]
+	    
+	template-std-igt: args -> <dnx-apply-template(|args)> (template, [])
+	  with
+	    template := [
+	  		RGR_IGt(DNX_TemplateVar(0), DNX_TemplateVar(1))
+	    ]
+	    
+	template-std-ieq: args -> <dnx-apply-template(|args)> (template, [])
+	  with
+	    template := [
+	  		RGR_IEq(DNX_TemplateVar(0), DNX_TemplateVar(1))
+	    ]
+	    
+	template-std-ior: args -> <dnx-apply-template(|args)> (template, [])
+	  with
+	    template := [
+	  		RGR_IOr(DNX_TemplateVar(0), DNX_TemplateVar(1))
+	    ]
+	    
+	template-std-iand: args -> <dnx-apply-template(|args)> (template, [])
+	  with
+	    template := [
+	  		RGR_IAnd(DNX_TemplateVar(0), DNX_TemplateVar(1))
+	    ]
+	    
+	template-std-true: args -> <dnx-apply-template(|args)> (template, [])
+	  with
+	    template := [
+	  		RGR_ILoad("1")
+	    ]
+	    
+	template-std-false: args -> <dnx-apply-template(|args)> (template, [])
+	  with
+	    template := [
+	  		RGR_ILoad("0")
+	    ]
+	    
+	template-std-int: args -> <dnx-apply-template(|args)> (template, [])
+	  with
+	    template := [
+	  		RGR_ILoad(DNX_TemplateVar(0))
+	    ]
+	    
+
+rules // Templates
+	template-line: args -> <dnx-apply-template(|args)> (template, labels)
+	  with
+	    labels := ["LINE"];
+	    template := [
+	  		RGR_Assign(DNX_AssignVar("a"), RGR_ContNew(RGR_ScopeGetCurrent(), FVM_Label("LINE"), "1")),
+	  		RGR_ContSet(DNX_AssignVar("a"), FVM_Cont("c"), RGR_ContGet(FVM_Cont("c"))), 
+	  	    RGR_Set(FVM_Path([FVM_Link("Q"), FVM_Slot("0")]), DNX_AssignVar("a")),
+	  	    
+	  	    DNX_TemplateVar(0),
+	  	     
+			RGR_ContReturn(RGR_Get(FVM_Path([FVM_Link("Q"), FVM_Slot("0")]))), 
+			(FVM_Label("LINE"), 99)
+	    ]
+	    
+	template-line-assign: args -> <dnx-apply-template(|args)> (template, labels)
+	  with
+	    labels := ["LINE"];
+	    template := [
+	  		RGR_Assign(DNX_AssignVar("a"), RGR_New("1")),
+	  		RGR_Link(DNX_AssignVar("a"), FVM_Path([FVM_Link("Q")]), FVM_Link("Q")), 
+	  		RGR_Link(DNX_AssignVar("a"), FVM_Self(), FVM_Link("P")), 
+	  		RGR_Assign(DNX_AssignVar("b"), RGR_ContNew(DNX_AssignVar("a"), FVM_Label("LINE"), "1")), 
+	  		RGR_ContSet(DNX_AssignVar("b"), FVM_Cont("c"), RGR_ContGet(FVM_Cont("c"))), 
+	  		RGR_Set(FVM_Path([FVM_Link("Q"), FVM_Slot("0")]), DNX_AssignVar("b")),
+	  	    
+	  	    DNX_TemplateVar(0),
+	  	    
+	  	    RGR_ScopeSetCurrent(DNX_AssignVar("a")),
+	  	     
+	  	    DNX_TemplateVar(1),
+	  	    
+			RGR_ContReturn(RGR_Get(FVM_Path([FVM_Link("Q"), FVM_Slot("0")]))), 
+			(FVM_Label("LINE"), 99)
+	  	]
+
+        
+	template-car: args -> <dnx-apply-template(|args)> (template, labels)
+	  with
+	    labels := [];
+	    template := [
+	  		RGR_Get(DNX_TemplateVar(0),FVM_Path([FVM_Slot("0")]))
 	  	]
 	  	
-	line-init-assign: _ -> (init, line_lbl)
-	  where
-	  	line_lbl := $[LINE_[<next-counter> "line"]];
-	  	init := [
-	  		STC_New("1"), 
-	  		STC_Dup(), 
-	  		STC_Link(FVM_Path([FVM_Link("Q")]), FVM_Link("Q")), 
-	  		STC_Dup(), 
-	  		STC_Link(FVM_Self(), FVM_Link("P")), 
-	  		STC_Dup(),
-	  		STC_ContNew(FVM_Label(line_lbl), "1"), 
-	  		STC_Dup(), 
-	  		STC_ContGet(FVM_Cont("c")), 
-	  		STC_ContSetR(FVM_Cont("c")), 
-	  		STC_Set(FVM_Path([FVM_Link("Q"), FVM_Slot("0")]))
+    template-cdr: args -> <dnx-apply-template(|args)> (template, labels)
+	  with
+	    labels := [];
+	    template := [
+	  		RGR_Get(DNX_TemplateVar(0),FVM_Path([FVM_Slot("1")]))
 	  	]
 	
-	next-line: lbl -> [
-		STC_Get(FVM_Path([FVM_Link("Q"), FVM_Slot("0")])), 
-		STC_ContReturn(), 
-		(FVM_Label(lbl), 99)
-	]
-	  	
-	scope-down: e -> [STC_New("0"), STC_ScopeNew("P")]
-	  	
-	scope-up: e -> [STC_ScopeExit(FVM_Path([FVM_Link("P")]))]
-	  	
-	  	
-	  	
-	compile-topexp: Define(Bind(name, idx), val) -> <concat> [init, scopedownexp, val_instrs, scopeupexp, scope_instr, next_line]
-	  where
-	  	(init, lbl) := <line-init-assign>;
-	  	scopedownexp := <scope-down>;
-	  	val_instrs := <compile-exp> val;
-	  	scopeupexp := <scope-up>;
-	  	
-	  	scope_instr := [STC_Swap(), STC_ScopeSetCurrent(), STC_Set(FVM_Path([FVM_Slot("0")]))];
-	  	next_line := <next-line> lbl
-	  	
-	compile-topexp: Redefine(name, val) -> <concat> [init, scopedown, val_instrs, scopeup, set_instrs, next_line]
-	  where
-	  	(init, lbl) := <line-init>;
-	  	scopedown := <scope-down>;
-	  	val_instrs := <compile-exp> val;
-	  	scopeup := <scope-up>;
-	  	
-	  	set_instrs := [STC_Set(<framevm-path-from-nabl2> (name, "Var", "index"))];
-	  	next_line := <next-line> lbl
+	template-set-car: args -> <dnx-apply-template(|args)> (template, labels)
+	  with
+	    labels := [];
+	    template := [
+	  		RGR_Set(DNX_TemplateVar(0), FVM_Path([FVM_Slot("0")]), DNX_TemplateVar(1))
+	  	]
 	
-	compile-topexp: Lambda(args, body) -> <concat> [init, scopedown, lambda, scopeup, [STC_Pop()], next_line]
-	  where
-	  	(init, lbl) := <line-init>;
-	  	scopedown := <scope-down>;
-	  	lambda := <compile-exp> Lambda(args, body);
-	  	scopeup := <scope-up>;
-	  	next_line := <next-line> lbl
+	template-set-cdr: args -> <dnx-apply-template(|args)> (template, labels)
+	  with
+	    labels := [];
+	    template := [
+	  		RGR_Set(DNX_TemplateVar(0), FVM_Path([FVM_Slot("1")]), DNX_TemplateVar(1))
+	  	]
+	  	
+    template-mk-cons-list: args -> <dnx-apply-template(|args)> (template, labels)
+	  with
+	    labels := [];
+	    template := [
+	  		RGR_NewRec([DNX_TemplateVar(0), DNX_TemplateVar(1)])
+	  	]
+	  	
+    template-mk-empty-cons-list: args -> <dnx-apply-template(|args)> (template, labels)
+	  with
+	    labels := [];
+	    template := [
+	  		RGR_New("0")
+	  	]
+	    
+//	template-call-closure: args -> <dnx-apply-template(|args)> (template, labels)
+//	  with
+//	    labels := ["CONT"];
+//	    template := [
+//	        RGR_Assign(DNX_AssignVar("a"), RGR_ClosToCont(DNX_TemplateVar(0))),
+//	  		RGR_ContSet(DNX_AssignVar("a"), FVM_Cont("c"), RGR_ContThis()), 
+//	  		RGR_ContCall(DNX_AssignVar("a"), FVM_Label("CONT")),
+//	  		(FVM_Label("CONT"), 99), 
+//	  		RGR_OnReturn(DNX_AssignVar("a"), RGR_ContRGet()),
+//	  		DNX_AssignVar("a")
+//        ]
+//	    
+//	template-mk-lambda: args -> <dnx-apply-template(|args)> (template, labels)
+//	  with
+//	    labels := ["CONT", "LAMBDA"];
+//	    template := [
+//	        RGR_Assign(DNX_AssignVar("a"), RGR_New(DNX_TemplateVar(0))),
+//	        RGR_Link(DNX_AssignVar("a"), FVM_Self(), FVM_Link("P")),
+//	        RGR_Assign(DNX_AssignVar("a"), RGR_ClosNew(DNX_AssignVar("a"), FVM_Label("LAMBDA"), 1)),
+//	  		RGR_Jump(FVM_Label("CONT")),
+//	  		
+//	  		FVM_Label("LAMBDA"),
+//	  		DNX_TemplateVar(1),
+//	  		RGR_Return([DNX_TemplateVar(2)]),
+//	  		
+//	  		FVM_Label("CONT"), 
+//	  		DNX_AssignVar("b")
+//        ]
+//        
+//    template-mk-lambda: args -> <dnx-apply-template(|args)> (template, labels)
+//	  with
+//	    labels := ["CONT", "LAMBDA"];
+//	    template := [
+//	        RGR_Assign(DNX_AssignVar("a"), RGR_New(DNX_TemplateVar(0))),
+//	        RGR_Link(DNX_AssignVar("a"), FVM_Self(), FVM_Link("P")),
+//	        RGR_Assign(DNX_AssignVar("a"), RGR_ClosNew(DNX_AssignVar("a"), FVM_Label("LAMBDA"), 1)),
+//	  		RGR_Jump(FVM_Label("CONT")),
+//	  		
+//	  		FVM_Label("LAMBDA"),
+//	  		DNX_TemplateVar(1),
+//	  		RGR_Return([DNX_TemplateVar(2)]),
+//	  		
+//	  		FVM_Label("CONT"), 
+//	  		DNX_AssignVar("b")
+//        ]
+
+rules // Anonymous templates
+	template-anon0: args -> <dnx-apply-template(|args)> (template, labels)
+	  with
+	    labels := ["LINE"];
+	    template := [
+	  		RGR_Assign(DNX_AssignVar("a"), RGR_New("0")), 
+	  		RGR_Link(DNX_AssignVar("a"), FVM_Self(), FVM_Link("Q")), 
+	  		RGR_Assign(DNX_AssignVar("b"), RGR_ContNew(DNX_AssignVar("a"), FVM_Label("LINE"), "1")), 
+	  		RGR_Set(DNX_AssignVar("b"), FVM_Path([FVM_Slot("0")])), 
+	  		
+	  		RGR_ContSet(DNX_AssignVar("b"), FVM_Cont("c"), RGR_ContGet(FVM_Cont("c"))),
+	  		RGR_ContCall(DNX_AssignVar("b"), FVM_Label("LINE")),
+	  		(FVM_Label("LINE"), 99)
+	  	]
+
+// ------------------------ //
+//     Generated Rules     //
+// ----------------------- //
+
+rules // Init
+	compile-init(): Program(exprs) -> <concat> [fvm_init, exprs', fvm_exit]
+	  with
+	  	fvm_init := <template-anon0> [];
+	  	exprs' := <dnx-sequence(compile-topexp)> exprs;
+	  	exitcode := <template-std-exit-ok>;
+	  	fvm_exit := [RGR_Return([exitcode])]
+	 
+rules // TopExp 	
+	compile-topexp: Define(Bind(name, _), val) -> instrs
+	  with
+	  	(val_instrs, val_exp) := <split-init-last> <compile-exp> val;
+	  	assign_val_instrs := <dnx-execute-in-scope(|"P", 0)> [val_instrs, RGR_Assign("r0", val_exp)];
+	  	assign_instrs := [RGR_Set(FVM_Path([FVM_Slot("0")]), "r0")];
+	  	instrs := <template-line-assign> [assign_val_instrs, assign_instrs]
+	  	
+	compile-topexp: Redefine(name, val) -> instrs
+	  with
+	  	(val_instrs, val_exp) := <split-init-last> <compile-exp> val;
+	  	assign_val_instrs := <dnx-execute-in-scope(|"P", 0)> [val_instrs, RGR_Assign("r0", val_exp)];
+	  	assign_instrs := [RGR_Set(FVM_Path([FVM_Slot("0")]), "r0")];
+	    instrs := <template-line> [assign_val_instrs, assign_instrs]
+	
+	compile-topexp: l@Lambda(args, body) -> instrs
+	  with
+	  	lambda_instrs := <dnx-execute-in-scope(|"P", 0)> <compile-exp> l;
+	    instrs := <template-line> [lambda_instrs]
 	
 	// Print results of the rest of the expressions
-	compile-topexp: e -> <concat> [init, scopedown, exp, [STC_Print()], scopeup, next_line]
+	compile-topexp: exp -> instrs
+	  with
+	  	(val_instrs, val_exp) := <split-init-last> <compile-exp> exp;
+	  	assign_val_instrs := <dnx-execute-in-scope(|"P", 0)> [val_instrs, RGR_Assign("r0", val_exp)];
+	  	print_instrs := [RGR_Print("r0")];
+	    instrs := <template-line> [assign_val_instrs, print_instrs]
+	  	
+	  	
+rules // Exp
+    compile-exp: UnOp(op, exp) -> <flatten-list> [exp_instrs, unops]
+	  with
+	  	(exp_instrs, exp_exps) := <split-init-last> <compile-exp> exp;
+	  	unops := <compile-unop(|exp_exps)> op
+	  	
+	compile-unop(|exp): Abs() -> instrs
+	  with
+	    var_a := <dnx-next-assign-var>;
+	    cond_instrs := RGR_Assign(var_a, exp);
+	    cond_exp := <compile-exp> BinOp(Lt(), var_a, Num("0"));
+	    then_instrs := <compile-exp> UnOp(Not(), var_a);
+	    else_instrs := var_a;
+	    
+	    instrs := <flatten-list> [cond_instrs, <template-std-if> [cond_exp, then_instrs, else_instrs]]
+	  	
+	  	
+	compile-unop(|exp): Not() -> <template-std-ineg> [exp]
+	compile-unop(|exp): Car() -> <template-car> [exp]
+	compile-unop(|exp): Cdr() -> <template-cdr> [exp]
+	
+	  	
+	compile-exp: BinOp(SetCar(), e1, e2) -> <flatten-list> [e1_instr, a_instr, b_instr, res_instr, instrs, var_b]
+	  with
+	  	(e1_instr, e1_exp) := <split-init-last> <compile-exp> e1;
+	    var_a := <dnx-next-assign-var>;
+	    a_instr := RGR_Assign(var_a, e1_exp);
+	    var_b := <dnx-next-assign-var>;
+	    (b_instr, b_exp) := <split-init-last> <compile-exp> UnOp(Car(), var_a);
+	    res_instr := RGR_Assign(var_b, b_exp);
+	    (e2_instr, e2_exp) := <split-init-last> <compile-exp> e2;
+	  	instrs := <template-set-car> [var_a, e2_exp]
+	  	
+	compile-exp: BinOp(SetCdr(), e1, e2) -> <flatten-list> [e1_instr, a_instr, b_instr, res_instr, instrs, var_b]
+	  with
+	  	(e1_instr, e1_exp) := <split-init-last> <compile-exp> e1;
+	    var_a := <dnx-next-assign-var>;
+	    a_instr := RGR_Assign(var_a, e1_exp);
+	    var_b := <dnx-next-assign-var>;
+	    (b_instr, b_exp) := <split-init-last> <compile-exp> UnOp(Cdr(), var_a);
+	    res_instr := RGR_Assign(var_b, b_exp);
+	    (e2_instr, e2_exp) := <split-init-last> <compile-exp> e2;
+	  	instrs := <template-set-cdr> [var_a, e2_exp]
+	  	
+	compile-exp: BinOp(op, e1, e2) -> <flatten-list> [e1_instr, e2_instr, binops]
 	  where
-	  	(init, lbl) := <line-init>;
-	  	scopedown := <scope-down>;
-	  	exp := <compile-exp> e;
-	  	scopeup := <scope-up>;
-	  	next_line := <next-line> lbl
+	  	(e1_instr, e1_exp) := <split-init-last> <compile-exp> e1;
+	  	(e2_instr, e2_exp) := <split-init-last> <compile-exp> e2;
+	  	binops := <compile-binop(|e1_exp, e2_exp)> op
 	  	
+	compile-binop(|e1, e2): Add() -> <template-std-iadd> [e1, e2]
+	compile-binop(|e1, e2): Sub() -> <template-std-isub> [e1, e2]
+	compile-binop(|e1, e2): Mul() -> <template-std-imul> [e1, e2]
+	compile-binop(|e1, e2): Div() -> <template-std-idiv> [e1, e2]
+	
+	compile-binop(|e1, e2): And() -> <template-std-iand> [e1, e2]
+	compile-binop(|e1, e2): Or()  -> <template-std-ior> [e1, e2]
+	compile-binop(|e1, e2): Eq()  -> <template-std-ieq> [e1, e2]
+	compile-binop(|e1, e2): Lt()  -> <template-std-ilt> [e1, e2]
+	compile-binop(|e1, e2): Gt()  -> <template-std-igt> [e1, e2]
+	
+	compile-binop(|e1, e2): Gte()  -> <flatten-list> [a_instr, b_instr, gt_instr, eq_instr, <template-std-ior> [gt_exp, eq_exp]]
+	  with
+	    var_a := <dnx-next-assign-var>;
+	    a_instr := RGR_Assign(var_a, e1);
+	    var_b := <dnx-next-assign-var>;
+	    b_instr := RGR_Assign(var_b, e2);
+	    
+	    (gt_instr, gt_exp) := <split-init-last> <compile-exp> BinOp(Gt(), var_a, var_b);
+	    (eq_instr, eq_exp) := <split-init-last> <compile-exp> BinOp(Eq(), var_a, var_b)
+	
+	compile-binop(|e1, e2): Lte()  -> <flatten-list> [a_instr, b_instr, gt_instr, eq_instr, <template-std-ior> [gt_exp, eq_exp]]
+	  with
+	    var_a := <dnx-next-assign-var>;
+	    a_instr := RGR_Assign(var_a, e1);
+	    var_b := <dnx-next-assign-var>;
+	    b_instr := RGR_Assign(var_b, e2);
+	    
+	    (gt_instr, gt_exp) := <split-init-last> <compile-exp> BinOp(Lt(), var_a, var_b);
+	    (eq_instr, eq_exp) := <split-init-last> <compile-exp> BinOp(Eq(), var_a, var_b)
+	
+	compile-exp: Conss(h, tail) -> <flatten-list> [h_instr, tail_instr, set]
+	  with
+	  	(h_instr, h_exp) := <split-init-last> <compile-exp> h;
+	  	(tail_instr, tail_exp) := <split-init-last> <compile-exp> tail;
+	  	set := <template-mk-cons-list> [h_exp, tail_exp]
 	  	
+	compile-exp: EmptyList() -> <template-mk-empty-cons-list>
+	
+//	compile-exp: FunApp([func|args]) -> <concat> [func_instr, a_instr, b_instr, store_instr, call_func, call_func]
+//	  with
+//	    var_a := <dnx-next-assign-var>;
+//	  	(func_instr, func_exp) := <split-init-last> <compile-exp> func;
+//	    a_instr := RGR_Assign(var_a, func_exp);
+//	    var_b := <dnx-next-assign-var>;
+//	    b_instr := RGR_Assign(var_b, <compile-exp> RGR_ClosUnpack(var_a));
+//	    store_instr := <dnx-frame-store(compile-arg | var_b)> args;
+//	  	call_func := <template-call-closure> [var_a]
+	
+//	compile-exp: Lambda(args, body) -> <concat> [instrs]
+//	  with
+//	    (body_instr, body_exp) := <dnx-assign-sequence(compile-exp)> body;
+//	    instrs := <template-mk-lambda> [<int-to-string><length> args, body_instr, body_exp]
+	  	
+
+	compile-arg: (idx, Bind(_, exp)) -> <compile-arg> (idx, exp)
+	compile-arg: (idx, exp) -> <compile-exp> exp
+	
+//	compile-exp: Callcc(func) -> <concat> [make_cont, prep_func, store_arg, call_func, func_body, precont, return]
+//	  where
+//	  	func_name := $[LAMBDA_[<next-counter> "lamb"]];
+//	  	precont_name := $[PRECONT_[<next-counter> "precont"]];
+//	  	cont_name := $[CONT_[<next-counter> "cont"]];
+//	  		
+//	  	make_cont := [STC_ContCopy(FVM_DeepCopy(), FVM_ShallowCopy()), STC_ContNew(FVM_Label(precont_name), "2")];
+//	  	prep_func := [STC_New("1"), STC_Dup(), STC_Link(FVM_Self(), "P")];
+//	  	store_arg := [STC_Dup(), STC_SwapN("2"), STC_SetR(FVM_Path([FVM_Slot("0")]))];
+//	  	call_func := [STC_Call(FVM_Label(func_name), FVM_Label(cont_name))];
+//	  	func_body := <compile-func> (func, func_name);
+//	  	precont   := [];
+////	  	precont   := [FVM_Label(precont_name), STC_Copy(), STC_Dup(), STC_Get(FVM_Path([FVM_Slot("0")])), STC_SetR(FVM_Path([FVM_SlotR()])), STC_ContNewR(FVM_Label(cont_name)), FVM_ContCall()];
+//	  	return    := []
+////	  	return    := [FVM_Label(cont_name), STC_Get(FVM_Path([FVM_SlotR()]))]
+
+	compile-exp: Ref(name) -> RGR_Get(path)
+	  with
+	    idx := "index";	// TODO
+		path := <framevm-path-from-nabl2> (name, "Var", idx)
+		
+	compile-exp: Set(Ref(name), val) -> <flatten-list> [a_instr, val_instr, set_instr, var_a]
+	  with
+	    idx := "index"; // TODO
+		path := <framevm-path-from-nabl2> (name, "Var", idx);
+	    var_a := <dnx-next-assign-var>;
+	    a_instr := RGR_Assign(var_a, RGR_Get(path));
+	    
+	    (val_instr, val_exp) := <compile-exp> val;
+	    set_instr := RGR_Set(path, val_exp)
+	
+	compile-exp: IfElse(cond, then, else) -> <flatten-list> [cond_instr, instrs]
+	  with
+	    (cond_instr, cond_exp) := <split-init-last> <compile-exp> cond;
+	    then_instrs@(_, _) := <split-init-last> <compile-exp> then;
+	    else_instrs@(_, _) := <split-init-last> <compile-exp> else;
+	    instrs := <template-std-exp-if> [cond_exp, then_instrs, else_instrs]
+	  	 
+	compile-exp: Let(binds, body) -> <flatten-list> [instrs, var_a]
+	  with
+	    var_a := <dnx-next-assign-var>;
+	    a_instr := RGR_Assign(var_a, <compile-exp> RGR_ScopeGetCurrent());
+	    
+	    var_b := <dnx-next-assign-var>;
+	    (body_instr, body_exp) := <dnx-assign-sequence(compile-exp)> body;
+	    b_instr := RGR_Assign(var_b, body_exp);
+	    
+	    store_instr := <dnx-frame-store(compile-arg | var_b)> binds;
+	    instrs := <dnx-execute-in-scope(|"P", <length> binds)> <flatten-list> [a_instr, body_instr, a_instr]
+	  	
+	
+	compile-exp: Bool("#f") -> <template-std-false> []
+	compile-exp: Bool("#t") -> <template-std-true> []
+	compile-exp: Num(val)   -> <template-std-int> [val]
