@@ -17,52 +17,144 @@ imports
 signature
   sorts DNX
   constructors    
-    DNX_AssignVar : STRING -> DNX
+    DNX_AssignVar       : STRING -> DNX
+    DNX_SharedAssignVar : STRING -> DNX
     
     DNX_TemplateVar     : STRING -> DNX
     DNX_TemplateVarInit : STRING -> DNX
     DNX_TemplateVarLast : STRING -> DNX
-    
 
-rules // Dynamix library functions
+
+// Dynamix library functions
+rules // Templating
+    dnx-apply-template(|args): (template, labels, vars) -> templated
+      with
+	    labels_map := <zip>(labels, <map(newname)> labels);
+	    vars_map := <zip>(vars, <map((\ _ -> <newname> "g_" \))> vars);
+	    argument_map := <flatten-list> <map-with-index(dnx-template-arg-create-map)> args;
+	    templated := <flatten-list> <foldl(dnx-fold-template)> (<concat> [labels_map, vars_map, argument_map], template)
+   
     dnx-fold-template: ((from, to), ast) -> <topdown(try(dnx-fold-template-replace(|from, to)))> ast
     dnx-fold-template-replace(|from, to): from -> to
+         
+    dnx-template-arg-create-map: (idx, arg) -> [(DNX_TemplateVar(idx'), arg), (DNX_TemplateVarInit(idx'), init), (DNX_TemplateVarLast(idx'), last)] where <is-list> arg
+      with 
+        idx':= <dec> idx;
+        (init, last) := <split-init-last> arg
+      
+    dnx-template-arg-create-map: (idx, arg) -> (DNX_TemplateVar(idx'), arg) 
+      with 
+        idx':= <dec> idx
     
-    dnx-fill-assign-wildcards: RGR_Program(h, p, blocks) -> RGR_Program(h, p, <map(dnx-fill-assign-wildcards)> blocks)
-    dnx-fill-assign-wildcards: RGR_Block(lbl, s, r, body, jump) -> RGR_Block(lbl, s, r', body', jump')
+rules // Register allocation  
+    dnx-allocate-registers: RGR_Program(h, p, blocks) -> RGR_Program(h, p, <dnx-allocate-shared-wildcards(|h)> blocks)
+    
+    dnx-allocate-local-wildcards: (RGR_Block(lbl, s, r, body, jump), binds) -> RGR_Block(lbl, s, r', body', jump')
       where
-        ([r'], binds1) := <dnx-fill-assign-wildcards-instr> ([r], []);
-        (body', binds2) := <dnx-fill-assign-wildcards-instr> (body, binds1);
-        ([jump'], _) := <dnx-fill-assign-wildcards-instr> ([jump], binds2)
-        
-    dnx-fill-assign-wildcards-instr: (instrs, binds) -> <foldl(dnx-fill-assign-wildcards-instr-fold)> (instrs, ([], binds))
-    
-    dnx-fill-assign-wildcards-instr-fold: (RGR_Assign(var@DNX_AssignVar(var_wld), val), (instrs, binds)) -> (<flatten-list> [instrs, instr'], binds')
+        ([r'], binds1) := <dnx-allocate-local-wildcards-instr> ([r], binds);
+        (body', binds2) := <dnx-allocate-local-wildcards-instr> (body, binds1);
+        ([jump'], _) := <dnx-allocate-local-wildcards-instr> ([jump], binds2)
+   
+    dnx-allocate-shared-wildcards(|header): blocks -> blocks'
       with
-        val':= <topdown(try(dnx-apply-binds(|binds)))> val;
-        binds':= <flatten-list> [binds, var_wld];
-        RGR_Ref(var') := <dnx-apply-binds(|binds')> var;
+        blocks_map := <map((\b@RGR_Block(FVM_Label(lbl), _, _, _, _) -> (lbl, b)\))> blocks;
+        FVM_Header(items) := header;
+        initial_block := <getfirst(?(FVM_InitBlock(lbl)); !lbl) +> !"MAIN"> items;
+        (blocks_map', _, _) := <dnx-allocate-shared-wildcards-recurse> (initial_block, (blocks_map, [], []));
+        blocks' := <map((\(_, block) -> block\))> blocks_map'
+    
+    dnx-allocate-shared-wildcards-recurse: (block, (map, discovered, binds)) -> (map4, discovered4, binds4)
+      where
+        <not(elem)> (block, discovered)
+      with
+        discovered2 := [block | discovered];
+        RGR_Block(lbl, s, r, body, jump) := <lookup'> (block, map);
+        ([r'], binds1) := <dnx-allocate-shared-wildcards-instr> ([r], binds);
+        (body', binds2) := <dnx-allocate-shared-wildcards-instr> (body, binds1);
+        ([jump'], binds3) := <dnx-allocate-shared-wildcards-instr> ([jump], binds2);
+        block' := RGR_Block(lbl, s, r', body',jump');
+        map2 := <list-some(dnx-map-update(|block, <dnx-allocate-local-wildcards> (block', binds3)))> map;
+        (jump_lbl, cf_lbl) := <collect-all(dnx-is-jump-lbl <+ dnx-is-cf-lbl); dnx-split-jump-cf-lbls> block';
+        (map3, discovered3, binds4) := <foldl(dnx-allocate-shared-wildcards-recurse)> (jump_lbl, (map2, discovered2, binds3));
+        (map4, discovered4, _) := <foldl(dnx-allocate-shared-wildcards-recurse)> (cf_lbl, (map3, discovered3, []))
+    
+    dnx-allocate-shared-wildcards-recurse: (_, acc@(_, _, _)) -> acc // Block already discovered
+
+    dnx-map-update(|block, new_val): (block, _) -> (block, new_val)
+      
+    dnx-split-jump-cf-lbls: list -> (<flatten-list><filter(dnx-is-jump-lbl-f)> list, <flatten-list><filter(dnx-is-cf-lbl-f)> list)
+    
+    
+    dnx-is-cf-lbl= ?(RGR_ContNew(_, _, _)) <+ 
+                   ?(RGR_Call(_, _, _))    <+ 
+                   ?(RGR_TailCall(_, _))   <+ 
+                   ?(RGR_Try(_, _, _, _, _))
+                   
+    dnx-is-jump-lbl= ?(RGR_Yield(_,_)) <+ 
+                     ?(RGR_JumpZ(_,_,_)) <+ 
+                     ?(RGR_Jump(_)) <+ 
+                     ?(RGR_Call(_, _, _)) <+ 
+                     ?(RGR_Call(_, _)) <+ 
+                     ?(RGR_ContCall(_, _)) <+ 
+                     ?(RGR_Try(_, _, _, _, _)) <+ 
+                     ?(RGR_Try(_, _, _)) <+ 
+                     ?(RGR_ScopeExit(_, _)) <+ 
+                     ?(RGR_ScopeNew(_,_,_))
+    
+    
+    dnx-is-cf-lbl-f: RGR_ContNew(_, FVM_Label(lbl), _) -> lbl
+    dnx-is-cf-lbl-f: RGR_Call(_, FVM_Label(lbl), _) -> lbl
+    dnx-is-cf-lbl-f: RGR_TailCall(_, FVM_Label(lbl)) -> lbl
+    dnx-is-cf-lbl-f: RGR_Try(_, FVM_Label(lbl1), _, FVM_Label(lbl2), _) -> [lbl1, lbl2]
+    
+    dnx-is-jump-lbl-f: RGR_Yield(_,FVM_Label(lbl)) -> lbl
+    dnx-is-jump-lbl-f: RGR_JumpZ(_,FVM_Label(lbl1),FVM_Label(lbl2)) -> [lbl1, lbl2]
+    dnx-is-jump-lbl-f: RGR_Jump(FVM_Label(lbl)) -> lbl
+    dnx-is-jump-lbl-f: RGR_Call(_, _, FVM_Label(lbl)) -> lbl
+    dnx-is-jump-lbl-f: RGR_Call(_, FVM_Label(lbl)) -> lbl
+    dnx-is-jump-lbl-f: RGR_ContCall(_, FVM_Label(lbl)) -> lbl
+    dnx-is-jump-lbl-f: RGR_Try(_, _, _, _, FVM_Label(lbl)) -> lbl
+    dnx-is-jump-lbl-f: RGR_Try(_, _, FVM_Label(lbl)) -> lbl
+    dnx-is-jump-lbl-f: RGR_ScopeExit(_, FVM_Label(lbl)) -> lbl
+    dnx-is-jump-lbl-f: RGR_ScopeNew(_,_,FVM_Label(lbl)) -> lbl
+    
+rules // Actual wildcare application    
+    dnx-allocate-local-wildcards-instr: (instrs, binds) -> <foldl(dnx-allocate-local-wildcards-instr-fold)> (instrs, ([], binds))
+    
+    dnx-allocate-local-wildcards-instr-fold: (RGR_Assign(var@DNX_AssignVar(var_wld), val), (instrs, binds)) -> (<flatten-list> [instrs, instr'], binds')
+      with
+        val':= <topdown(try(dnx-apply-local-binds(|binds)))> val;
+        binds':= <flatten-list; make-set> [binds, var_wld];
+        RGR_Ref(var') := <dnx-apply-local-binds(|binds')> var;
         instr' := RGR_Assign(var', val')
   
-    dnx-fill-assign-wildcards-instr-fold: (instr, (instrs, binds)) -> (<flatten-list> [instrs, instr'], binds) where instr' := <topdown(try(dnx-apply-binds(|binds)))> instr
+    dnx-allocate-local-wildcards-instr-fold: (instr, (instrs, binds)) -> (<flatten-list> [instrs, instr'], binds) where instr' := <topdown(try(dnx-apply-local-binds(|binds)))> instr
+
+    dnx-apply-local-binds(|binds): DNX_AssignVar(var) -> <dnx-lookup-assign> (var, binds)
     
-    dnx-apply-binds(|binds): DNX_AssignVar(var) -> <dnx-lookup-assign> (var, binds)
+    
+    dnx-allocate-shared-wildcards-instr: (instrs, binds) -> <foldl(dnx-allocate-shared-wildcards-instr-fold)> (instrs, ([], binds))
+    
+    dnx-allocate-shared-wildcards-instr-fold: (RGR_Assign(var@DNX_SharedAssignVar(var_wld), val), (instrs, binds)) -> (<flatten-list> [instrs, instr'], binds')
+      with
+        val':= <topdown(try(dnx-apply-shared-binds(|binds)))> val;
+        binds':= <flatten-list; make-set> [binds, var_wld];
+        RGR_Ref(var') := <dnx-apply-shared-binds(|binds')> var;
+        instr' := RGR_Assign(var', val')
+  
+    dnx-allocate-shared-wildcards-instr-fold: (instr, (instrs, binds)) -> (<flatten-list> [instrs, instr'], binds) where instr' := <topdown(try(dnx-apply-shared-binds(|binds)))> instr
+
+    dnx-apply-shared-binds(|binds): DNX_SharedAssignVar(var) -> <dnx-lookup-assign> (var, binds)
+    
     dnx-lookup-assign: (name, binds) -> RGR_Ref($[r[<dec><get-index> (name, binds)]])
-    
+   
+
+rules // Helper functions 
     dnx-sequence(s): exps -> <flatten-list; mapconcat(s)> exps
     dnx-next-assign-var: _ -> DNX_AssignVar(<newname> "v_")
     
     dnx-execute-in-scope(|lbl, size): term -> <flatten-list> [RGR_Terminal(RGR_ScopeNew(RGR_New(<int-to-string> size), FVM_Link(lbl))), term, RGR_Terminal(RGR_ScopeExit(FVM_Path([FVM_Link(lbl)])))]
   
-    dnx-apply-template(|args): (template, labels) -> templated
-      with
-	    labels_map := <zip>(labels, <map(newname)> labels);
-	    argument_map := <flatten-list> <map-with-index(dnx-template-arg-create-map)> args;
-	    templated := <flatten-list> <foldl(dnx-fold-template)> (<concat> [labels_map, argument_map], template)
-        
-    dnx-template-arg-create-map: (idx, arg) -> [(DNX_TemplateVar(idx'), arg), (DNX_TemplateVarInit(idx'), init), (DNX_TemplateVarLast(idx'), last)] with idx':= <dec> idx where <is-list> arg; (init, last) := <split-init-last> arg
-    dnx-template-arg-create-map: (idx, arg) -> (DNX_TemplateVar(idx'), arg) with idx':= <dec> idx
-    
     dnx-frame-store(compile-s| frame): args -> <flatten-list> [store_instrs, stored_exps]
       with
         (store_instrs, store_exps) := <unzip> <map(<split-init-last> <compile-s>)> args;
@@ -76,26 +168,29 @@ rules // Dynamix library functions
 	    init_instrs := <flatten-list> <zip> (init_instr, <map(s)> init_exp);
 	    (last_instr, last_exp) := <compile-s> last
 
-    is-dnx-template= ?(DNX_AssignVar(_)) <+ ?(DNX_TemplateVar(_)) <+ ?(DNX_TemplateVarInit(_)) <+ ?(DNX_TemplateVarLast(_))
-    dnx-check-unbound-vars: a -> a where collect-all(is-dnx-template); (?([]) <+ (debug(!"The output contains unbound variables:\n"); fail))
-    dnx-check-unbound-vars = debug; fail
-   
     dnx-resolve-name: name -> path
       where
         idx := 1;	// TODO
         path := <framevm-path-from-nabl2> (name, "Var", "index")
-       
+
+rules // Validation rules
+    dnx-validate = dnx-check-unbound-vars
+    
+    is-dnx-template= ?(DNX_AssignVar(_)) <+ ?(DNX_SharedAssignVar(_)) <+ ?(DNX_TemplateVar(_)) <+ ?(DNX_TemplateVarInit(_)) <+ ?(DNX_TemplateVarLast(_))
+    dnx-check-unbound-vars: a -> a where collect-all(is-dnx-template); (?([]) <+ (debug(!"The output contains unbound variables (this could imply unreachable code):\n"); fail))
+    dnx-check-unbound-vars = debug; fail
+   
+    
        
        
 rules // Imported templates
-	template-std-exit-ok: args -> <dnx-apply-template(|args)> (template, labels)
+	template-std-exit-ok: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
-	    labels := [];
 	    template := [
 	  		RGR_ILoad("0")
 	    ]
 	    
-    template-std-if: args -> <dnx-apply-template(|args)> (template, labels)
+    template-std-if: args -> <dnx-apply-template(|args)> (template, labels, [])
 	  with
 	    labels := ["THEN", "ELSE", "CONT"];
 	    template := [
@@ -112,99 +207,101 @@ rules // Imported templates
 	  		FVM_Label("CONT")
 	    ]
 	    
-	template-std-exp-if: args -> <dnx-apply-template(|args)> (template, labels)
+	template-std-exp-if: args -> <dnx-apply-template(|args)> (template, labels, vars)
 	  with
 	    labels := ["THEN", "ELSE", "CONT"];
+	    vars := ["a"];
 	    template := [
-	  		RGR_JumpZ(DNX_TemplateVar(0), FVM_Label("ELSE"), FVM_Label("THEN")),
+	        DNX_TemplateVarInit(0),
+	  		RGR_JumpZ(DNX_TemplateVarLast(0), FVM_Label("ELSE"), FVM_Label("THEN")),
 	  		
 	  		FVM_Label("THEN"),
 	  		DNX_TemplateVarInit(1),
-	  		RGR_Assign(DNX_AssignVar("a"), DNX_TemplateVarLast(1)),
+	  		RGR_Assign(DNX_SharedAssignVar("a"), DNX_TemplateVarLast(1)),
 	  		RGR_Jump(FVM_Label("CONT")),
 	  		
 	  		FVM_Label("ELSE"),
 	  		DNX_TemplateVarInit(2),
-	  		RGR_Assign(DNX_AssignVar("a"), DNX_TemplateVarLast(2)),
+	  		RGR_Assign(DNX_SharedAssignVar("a"), DNX_TemplateVarLast(2)),
 	  		RGR_Jump(FVM_Label("CONT")),
 	  		
 	  		FVM_Label("CONT"),
-	  		DNX_AssignVar("a")
+	  		DNX_SharedAssignVar("a")
 	    ]
 	    
-	template-std-ineg: args -> <dnx-apply-template(|args)> (template, [])
+	template-std-ineg: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
 	    template := [
 	  		RGR_INeg(DNX_TemplateVar(0))
 	    ]
 	    
-	template-std-iadd: args -> <dnx-apply-template(|args)> (template, [])
+	template-std-iadd: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
 	    template := [
 	  		RGR_IAdd(DNX_TemplateVar(0), DNX_TemplateVar(1))
 	    ]
 	    
-	template-std-isub: args -> <dnx-apply-template(|args)> (template, [])
+	template-std-isub: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
 	    template := [
 	  		RGR_ISub(DNX_TemplateVar(0), DNX_TemplateVar(1))
 	    ]
 	    
-	template-std-imul: args -> <dnx-apply-template(|args)> (template, [])
+	template-std-imul: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
 	    template := [
 	  		RGR_IMul(DNX_TemplateVar(0), DNX_TemplateVar(1))
 	    ]
 	    
-	template-std-idiv: args -> <dnx-apply-template(|args)> (template, [])
+	template-std-idiv: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
 	    template := [
 	  		RGR_IDiv(DNX_TemplateVar(0), DNX_TemplateVar(1))
 	    ]
 	    
-	template-std-ilt: args -> <dnx-apply-template(|args)> (template, [])
+	template-std-ilt: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
 	    template := [
 	  		RGR_ILt(DNX_TemplateVar(0), DNX_TemplateVar(1))
 	    ]
 	    
-	template-std-igt: args -> <dnx-apply-template(|args)> (template, [])
+	template-std-igt: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
 	    template := [
 	  		RGR_IGt(DNX_TemplateVar(0), DNX_TemplateVar(1))
 	    ]
 	    
-	template-std-ieq: args -> <dnx-apply-template(|args)> (template, [])
+	template-std-ieq: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
 	    template := [
 	  		RGR_IEq(DNX_TemplateVar(0), DNX_TemplateVar(1))
 	    ]
 	    
-	template-std-ior: args -> <dnx-apply-template(|args)> (template, [])
+	template-std-ior: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
 	    template := [
 	  		RGR_IOr(DNX_TemplateVar(0), DNX_TemplateVar(1))
 	    ]
 	    
-	template-std-iand: args -> <dnx-apply-template(|args)> (template, [])
+	template-std-iand: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
 	    template := [
 	  		RGR_IAnd(DNX_TemplateVar(0), DNX_TemplateVar(1))
 	    ]
 	    
-	template-std-true: args -> <dnx-apply-template(|args)> (template, [])
+	template-std-true: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
 	    template := [
 	  		RGR_ILoad("1")
 	    ]
 	    
-	template-std-false: args -> <dnx-apply-template(|args)> (template, [])
+	template-std-false: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
 	    template := [
 	  		RGR_ILoad("0")
 	    ]
 	    
-	template-std-int: args -> <dnx-apply-template(|args)> (template, [])
+	template-std-int: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
 	    template := [
 	  		RGR_ILoad(DNX_TemplateVar(0))

@@ -23,12 +23,13 @@ rules // Toplevel rule
 	    header := [FVM_InitSize(<int-to-string> initial_scope_size), FVM_ContAlias(FVM_Cont("n"), "1"), FVM_LinkAlias(FVM_Link("Q"), "1")]
 	  where
 	    flat_ast := <compile-init> ast;
-	    ast':= <rgr-from-flat; dnx-fill-assign-wildcards; dnx-check-unbound-vars> (FVM_Header(header), flat_ast)	    
+	    ast':= <rgr-from-flat; dnx-allocate-registers; dnx-validate> (FVM_Header(header), flat_ast)	    
 
 rules // Templates
-	template-line: args -> <dnx-apply-template(|args)> (template, labels)
+	template-line: args -> <dnx-apply-template(|args)> (template, labels, vars)
 	  with
 	    labels := ["LINE"];
+	    vars := ["a"];
 	    template := [
 	  		RGR_Assign(DNX_AssignVar("a"), RGR_ContNew(RGR_ScopeGetCurrent(), FVM_Label("LINE"), "1")),
 	  		RGR_Terminal(RGR_ContSet(DNX_AssignVar("a"), FVM_Cont("c"), RGR_ContGet(FVM_Cont("c")))), 
@@ -40,9 +41,10 @@ rules // Templates
 			(FVM_Label("LINE"), 99)
 	    ]
 	    
-	template-line-assign: args -> <dnx-apply-template(|args)> (template, labels)
+	template-line-assign: args -> <dnx-apply-template(|args)> (template, labels, vars)
 	  with
 	    labels := ["LINE"];
+	    vars := ["a", "b"];
 	    template := [
 	  		RGR_Assign(DNX_AssignVar("a"), RGR_New("1")),
 	  		RGR_Terminal(RGR_Link(DNX_AssignVar("a"), FVM_Path([FVM_Link("Q")]), FVM_Link("Q"))), 
@@ -61,55 +63,49 @@ rules // Templates
 			(FVM_Label("LINE"), 99)
 	  	]
 	  	
-    template-print: args -> <dnx-apply-template(|args)> (template, [])
+    template-print: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
 	    template := [
 	  		RGR_Terminal(RGR_Print(DNX_TemplateVar(0)))
 	  	]
 
-	template-car: args -> <dnx-apply-template(|args)> (template, labels)
+	template-car: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
-	    labels := [];
 	    template := [
 	  		RGR_Get(DNX_TemplateVar(0),FVM_Path([FVM_Slot("0")]))
 	  	]
 	  	
-    template-cdr: args -> <dnx-apply-template(|args)> (template, labels)
+    template-cdr: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
-	    labels := [];
 	    template := [
 	  		RGR_Get(DNX_TemplateVar(0),FVM_Path([FVM_Slot("1")]))
 	  	]
 	
-	template-set-car: args -> <dnx-apply-template(|args)> (template, labels)
+	template-set-car: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
-	    labels := [];
 	    template := [
 	  		RGR_Terminal(RGR_Set(DNX_TemplateVar(0), FVM_Path([FVM_Slot("0")]), DNX_TemplateVar(1)))
 	  	]
 	
-	template-set-cdr: args -> <dnx-apply-template(|args)> (template, labels)
+	template-set-cdr: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
-	    labels := [];
 	    template := [
 	  		RGR_Terminal(RGR_Set(DNX_TemplateVar(0), FVM_Path([FVM_Slot("1")]), DNX_TemplateVar(1)))
 	  	]
 	  	
-    template-mk-cons-list: args -> <dnx-apply-template(|args)> (template, labels)
+    template-mk-cons-list: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
-	    labels := [];
 	    template := [
 	  		RGR_NewRec([DNX_TemplateVar(0), DNX_TemplateVar(1)])
 	  	]
 	  	
-    template-mk-empty-cons-list: args -> <dnx-apply-template(|args)> (template, labels)
+    template-mk-empty-cons-list: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
-	    labels := [];
 	    template := [
 	  		RGR_New("0")
 	  	]
 	    
-//	template-call-closure: args -> <dnx-apply-template(|args)> (template, labels)
+//	template-call-closure: args -> <dnx-apply-template(|args)> (template, labels, vars)
 //	  with
 //	    labels := ["CONT"];
 //	    template := [
@@ -121,7 +117,7 @@ rules // Templates
 //	  		DNX_AssignVar("a")
 //        ]
 //	    
-//	template-mk-lambda: args -> <dnx-apply-template(|args)> (template, labels)
+//	template-mk-lambda: args -> <dnx-apply-template(|args)> (template, labels, vars)
 //	  with
 //	    labels := ["CONT", "LAMBDA"];
 //	    template := [
@@ -138,7 +134,7 @@ rules // Templates
 //	  		DNX_AssignVar("b")
 //        ]
 //        
-//    template-mk-lambda: args -> <dnx-apply-template(|args)> (template, labels)
+//    template-mk-lambda: args -> <dnx-apply-template(|args)> (template, labels, vars)
 //	  with
 //	    labels := ["CONT", "LAMBDA"];
 //	    template := [
@@ -156,9 +152,10 @@ rules // Templates
 //        ]
 
 rules // Anonymous templates
-	template-anon0: args -> <dnx-apply-template(|args)> (template, labels)
+	template-anon0: args -> <dnx-apply-template(|args)> (template, labels, vars)
 	  with
 	    labels := ["LINE"];
+	    vars := ["a", "b"];
 	    template := [
 	  		RGR_Assign(DNX_AssignVar("a"), RGR_New("0")), 
 	  		RGR_Terminal(RGR_Link(DNX_AssignVar("a"), FVM_Self(), FVM_Link("Q"))), 
@@ -166,7 +163,7 @@ rules // Anonymous templates
 	  		RGR_Terminal(RGR_Set(FVM_Path([FVM_Slot("0")]), DNX_AssignVar("b"))), 
 	  		
 	  		RGR_Terminal(RGR_ContSet(DNX_AssignVar("b"), FVM_Cont("c"), RGR_ContGet(FVM_Cont("c")))),
-	  		RGR_ContCall(DNX_AssignVar("b"), FVM_Label("LINE")),
+	  		RGR_ContReturn(DNX_AssignVar("b")),
 	  		(FVM_Label("LINE"), 99)
 	  	]
 
@@ -219,6 +216,8 @@ rules // TopExp
 	  	
 	  	
 rules // Exp
+	compile-exp: var@DNX_AssignVar(_) -> [var]
+	
     compile-exp: UnOp(op, exp) -> <flatten-list> [exp_instrs, unops]
 	  with
 	  	(exp_instrs, exp_exps) := <split-init-last> <compile-exp> exp;
@@ -305,7 +304,7 @@ rules // Exp
 	  	(tail_instr, tail_exp) := <split-init-last> <compile-exp> tail;
 	  	set := <template-mk-cons-list> [h_exp, tail_exp]
 	  	
-	compile-exp: EmptyList() -> <template-mk-empty-cons-list>
+	compile-exp: EmptyList() -> <template-mk-empty-cons-list> []
 	
 //	compile-exp: FunApp([func|args]) -> <concat> [func_instr, a_instr, b_instr, store_instr, call_func, call_func]
 //	  with
@@ -358,9 +357,7 @@ rules // Exp
 	compile-exp: IfElse(cond, then, else) -> <flatten-list> [cond_instr, instrs]
 	  with
 	    (cond_instr, cond_exp) := <split-init-last> <compile-exp> cond;
-	    then_instrs@(_, _) := <split-init-last> <compile-exp> then;
-	    else_instrs@(_, _) := <split-init-last> <compile-exp> else;
-	    instrs := <template-std-exp-if> [cond_exp, then_instrs, else_instrs]
+	    instrs := <template-std-exp-if> [cond_exp, <compile-exp> then, <compile-exp> else]
 	  	 
 	compile-exp: Let(binds, body) -> <flatten-list> [instrs, var_a]
 	  with
