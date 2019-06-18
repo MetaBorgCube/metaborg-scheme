@@ -88,6 +88,7 @@ rules // Register allocation
     dnx-is-cf-lbl= ?(RGR_ContNew(_, _, _)) <+ 
                    ?(RGR_Call(_, _, _))    <+ 
                    ?(RGR_TailCall(_, _))   <+ 
+                   ?(RGR_ClosNew(_, _, _)) <+ 
                    ?(RGR_Try(_, _, _, _, _))
                    
     dnx-is-jump-lbl= ?(RGR_Yield(_,_)) <+ 
@@ -105,6 +106,7 @@ rules // Register allocation
     dnx-is-cf-lbl-f: RGR_ContNew(_, FVM_Label(lbl), _) -> lbl
     dnx-is-cf-lbl-f: RGR_Call(_, FVM_Label(lbl), _) -> lbl
     dnx-is-cf-lbl-f: RGR_TailCall(_, FVM_Label(lbl)) -> lbl
+    dnx-is-cf-lbl-f: RGR_ClosNew(_, FVM_Label(lbl), _) -> lbl
     dnx-is-cf-lbl-f: RGR_Try(_, FVM_Label(lbl1), _, FVM_Label(lbl2), _) -> [lbl1, lbl2]
     
     dnx-is-jump-lbl-f: RGR_Yield(_,FVM_Label(lbl)) -> lbl
@@ -118,9 +120,16 @@ rules // Register allocation
     dnx-is-jump-lbl-f: RGR_ScopeExit(_, FVM_Label(lbl)) -> lbl
     dnx-is-jump-lbl-f: RGR_ScopeNew(_,_,FVM_Label(lbl)) -> lbl
     
-rules // Actual wildcare application    
+rules // Actual wildcard application    
     dnx-allocate-local-wildcards-instr: (instrs, binds) -> <foldl(dnx-allocate-local-wildcards-instr-fold)> (instrs, ([], binds))
     
+    dnx-allocate-local-wildcards-instr-fold: (Some(RGR_OnReturn(vars, val)), (instrs, binds)) -> (<flatten-list> [instrs, Some(RGR_OnReturn(vars', val))], binds')
+      where
+        local_vars := <map(\DNX_AssignVar(var) -> var\)> vars
+      with
+        binds':= <flatten-list; make-set> [binds, local_vars];
+        vars' := <map(dnx-apply-local-binds(|binds'); (\RGR_Ref(ref) -> ref\))> vars
+        
     dnx-allocate-local-wildcards-instr-fold: (RGR_Assign(var@DNX_AssignVar(var_wld), val), (instrs, binds)) -> (<flatten-list> [instrs, instr'], binds')
       with
         val':= <topdown(try(dnx-apply-local-binds(|binds)))> val;
@@ -135,6 +144,13 @@ rules // Actual wildcare application
     
     dnx-allocate-shared-wildcards-instr: (instrs, binds) -> <foldl(dnx-allocate-shared-wildcards-instr-fold)> (instrs, ([], binds))
     
+    dnx-allocate-shared-wildcards-instr-fold: (Some(RGR_OnReturn(vars, val)), (instrs, binds)) -> (<flatten-list> [instrs, Some(RGR_OnReturn(vars', val))], binds')
+      where
+        shared_vars := <map(\DNX_SharedAssignVar(var) -> var\)> vars
+      with
+        binds':= <flatten-list; make-set> [binds, shared_vars];
+        vars' := <map(dnx-apply-shared-binds(|binds'); (\RGR_Ref(ref) -> ref\))> vars
+      
     dnx-allocate-shared-wildcards-instr-fold: (RGR_Assign(var@DNX_SharedAssignVar(var_wld), val), (instrs, binds)) -> (<flatten-list> [instrs, instr'], binds')
       with
         val':= <topdown(try(dnx-apply-shared-binds(|binds)))> val;
@@ -155,18 +171,26 @@ rules // Helper functions
     
     dnx-execute-in-scope(|lbl, size): term -> <flatten-list> [RGR_Terminal(RGR_ScopeNew(RGR_New(<int-to-string> size), FVM_Link(lbl))), term, RGR_Terminal(RGR_ScopeExit(FVM_Path([FVM_Link(lbl)])))]
   
-    dnx-frame-store(compile-s| frame): args -> <flatten-list> [store_instrs, stored_exps]
+    dnx-cont-store(compile-s| cont): args -> <dnx-frame-store(compile-s| RGR_ContUnpack(cont))> args
+    dnx-cont-store-named(compile-s| cont): args -> <dnx-frame-store-named(compile-s| RGR_ContUnpack(cont))> args
+    
+    dnx-frame-store(compile-s| frame): args -> <flatten-list> [store_instrs, a_instrs, stored_exps]
       with
-        (store_instrs, store_exps) := <unzip> <map(<split-init-last> <compile-s>)> args;
-        stored_exps := <map(\exp -> RGR_Set(frame, exp)\)> store_exps
+        (store_instrs, store_exps) := <unzip> <map(compile-s; split-init-last)> args;
+        var_a := <dnx-next-assign-var>;
+	  	a_instrs := RGR_Assign(var_a, frame);
+	    
+        stored_exps := <map-with-index(\(idx, exp) -> RGR_Terminal(RGR_Set(var_a, FVM_Path([FVM_Slot(<int-to-string><dec> idx)]),exp))\)> store_exps
+    
+    dnx-frame-store-named(compile-s| frame): args -> [] // TODO
     
     dnx-assign-sequence(compile-s): exps -> <dnx-exp-sequence-with(compile-s, \c -> RGR_Assign(var, c)\)> with var := <dnx-next-assign-var>
-    dnx-exp-sequence-with(compile-s, s): exps -> (<flatten-list> [init_instrs, last_instr], last_exp)
+    dnx-exp-sequence-with(compile-s, s): exps -> <flatten-list> [init_instrs, last_instr_exp]
       with
         (init, last) := <split-init-last> exps;
 	    (init_instr, init_exp) := <unzip> <map(compile-s; split-init-last)> init;	
-	    init_instrs := <flatten-list> <zip> (init_instr, <map(s)> init_exp);
-	    (last_instr, last_exp) := <compile-s> last
+	    init_instrs := <zip; map((\(i1, i2) -> <flatten-list> [i1, i2]\)); flatten-list> (init_instr, <map(s)> init_exp);
+	    last_instr_exp := <compile-s> last
 
     dnx-resolve-name: name -> path
       where

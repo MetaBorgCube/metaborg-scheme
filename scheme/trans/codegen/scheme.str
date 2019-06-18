@@ -13,7 +13,6 @@ imports
   desugar/-
 
 imports
-  nabl2/api
   codegen/dnx-stdlib
    
 rules // Toplevel rule
@@ -105,51 +104,23 @@ rules // Templates
 	  		RGR_New("0")
 	  	]
 	    
-//	template-call-closure: args -> <dnx-apply-template(|args)> (template, labels, vars)
-//	  with
-//	    labels := ["CONT"];
-//	    template := [
-//	        RGR_Assign(DNX_AssignVar("a"), RGR_ClosToCont(DNX_TemplateVar(0))),
-//	  		RGR_ContSet(DNX_AssignVar("a"), FVM_Cont("c"), RGR_ContThis()), 
-//	  		RGR_ContCall(DNX_AssignVar("a"), FVM_Label("CONT")),
-//	  		(FVM_Label("CONT"), 99), 
-//	  		RGR_OnReturn(DNX_AssignVar("a"), RGR_ContRGet()),
-//	  		DNX_AssignVar("a")
-//        ]
-//	    
-//	template-mk-lambda: args -> <dnx-apply-template(|args)> (template, labels, vars)
-//	  with
-//	    labels := ["CONT", "LAMBDA"];
-//	    template := [
-//	        RGR_Assign(DNX_AssignVar("a"), RGR_New(DNX_TemplateVar(0))),
-//	        RGR_Link(DNX_AssignVar("a"), FVM_Self(), FVM_Link("P")),
-//	        RGR_Assign(DNX_AssignVar("a"), RGR_ClosNew(DNX_AssignVar("a"), FVM_Label("LAMBDA"), 1)),
-//	  		RGR_Jump(FVM_Label("CONT")),
-//	  		
-//	  		FVM_Label("LAMBDA"),
-//	  		DNX_TemplateVar(1),
-//	  		RGR_Return([DNX_TemplateVar(2)]),
-//	  		
-//	  		FVM_Label("CONT"), 
-//	  		DNX_AssignVar("b")
-//        ]
-//        
-//    template-mk-lambda: args -> <dnx-apply-template(|args)> (template, labels, vars)
-//	  with
-//	    labels := ["CONT", "LAMBDA"];
-//	    template := [
-//	        RGR_Assign(DNX_AssignVar("a"), RGR_New(DNX_TemplateVar(0))),
-//	        RGR_Link(DNX_AssignVar("a"), FVM_Self(), FVM_Link("P")),
-//	        RGR_Assign(DNX_AssignVar("a"), RGR_ClosNew(DNX_AssignVar("a"), FVM_Label("LAMBDA"), 1)),
-//	  		RGR_Jump(FVM_Label("CONT")),
-//	  		
-//	  		FVM_Label("LAMBDA"),
-//	  		DNX_TemplateVar(1),
-//	  		RGR_Return([DNX_TemplateVar(2)]),
-//	  		
-//	  		FVM_Label("CONT"), 
-//	  		DNX_AssignVar("b")
-//        ]
+	template-mk-lambda: args -> <dnx-apply-template(|args)> (template, labels, vars)
+	  with
+	    labels := ["CONT", "LAMBDA"];
+	    vars := ["a", "b"];
+	    template := [
+	        RGR_Assign(DNX_AssignVar("a"), RGR_New(DNX_TemplateVar(0))),
+	        RGR_Terminal(RGR_Link(DNX_AssignVar("a"), FVM_Self(), FVM_Link("P"))),
+	        RGR_Assign(DNX_SharedAssignVar("b"), RGR_ClosNew(DNX_AssignVar("a"), FVM_Label("LAMBDA"), "1")),
+	  		RGR_Jump(FVM_Label("CONT")),
+	  		
+	  		(FVM_Label("LAMBDA"), 99),
+	  		DNX_TemplateVarInit(1),
+	  		RGR_Return([DNX_TemplateVarLast(1)]),
+	  		
+	  		FVM_Label("CONT"), 
+	  		DNX_SharedAssignVar("b")
+        ]
 
 rules // Anonymous templates
 	template-anon0: args -> <dnx-apply-template(|args)> (template, labels, vars)
@@ -202,8 +173,10 @@ rules // TopExp
 	
 	compile-topexp: l@Lambda(args, body) -> instrs
 	  with
-	  	lambda_instrs := <dnx-execute-in-scope(|"P", 0)> <compile-exp> l;
-	    instrs := <template-line> [lambda_instrs]
+	  	(lambda_instr, lambda_exp) := <split-init-last>  <compile-exp> l;
+	  	var_a := <dnx-next-assign-var>;
+	  	lambda_instrs := <flatten-list> [lambda_instr, RGR_Assign(var_a, lambda_exp)];
+	    instrs := <template-line> [<dnx-execute-in-scope(|"P", 0)> lambda_instrs]
 	
 	// Print results of the rest of the expressions
 	compile-topexp: exp -> instrs
@@ -306,20 +279,31 @@ rules // Exp
 	  	
 	compile-exp: EmptyList() -> <template-mk-empty-cons-list> []
 	
-//	compile-exp: FunApp([func|args]) -> <concat> [func_instr, a_instr, b_instr, store_instr, call_func, call_func]
-//	  with
-//	    var_a := <dnx-next-assign-var>;
-//	  	(func_instr, func_exp) := <split-init-last> <compile-exp> func;
-//	    a_instr := RGR_Assign(var_a, func_exp);
-//	    var_b := <dnx-next-assign-var>;
-//	    b_instr := RGR_Assign(var_b, <compile-exp> RGR_ClosUnpack(var_a));
-//	    store_instr := <dnx-frame-store(compile-arg | var_b)> args;
-//	  	call_func := <template-call-closure> [var_a]
-	
-//	compile-exp: Lambda(args, body) -> <concat> [instrs]
-//	  with
-//	    (body_instr, body_exp) := <dnx-assign-sequence(compile-exp)> body;
-//	    instrs := <template-mk-lambda> [<int-to-string><length> args, body_instr, body_exp]
+	compile-exp: FunApp([func|args]) -> <flatten-list> [func_instr, a_instr, b_instr, store_instr, call_func, c_instr]
+	  with
+	    var_a := <dnx-next-assign-var>;
+	  	(func_instr, func_exp) := <split-init-last> <compile-exp> func;
+	    a_instr := RGR_Assign(var_a, func_exp);
+	    
+	    var_b := <dnx-next-assign-var>;
+	    b_instr := [
+	    	RGR_Assign(var_b, RGR_ClosToCont(var_a)),
+	    	RGR_Terminal(RGR_ContSet(var_b, FVM_Cont("c"), RGR_ContThis()))
+	    ];
+	    store_instr := <dnx-cont-store(compile-exp | var_b)> args;
+	  	
+	  	lbl := FVM_Label(<newname> "CONT");
+	  	call_func := [RGR_ContCall(var_b, lbl), lbl];
+	  	var_c := <dnx-next-assign-var>;
+	    c_instr := [
+	    	RGR_OnReturn([var_c], RGR_ContRGet()),
+	    	var_c
+	    ]
+
+	compile-exp: Lambda(args, body) -> <flatten-list> [instrs]
+	  with
+	    body_instr_exp := <dnx-assign-sequence(compile-exp)> body;
+	    instrs := <template-mk-lambda> [<int-to-string><length> args, body_instr_exp]
 	  	
 
 	compile-arg: (idx, Bind(_, exp)) -> <compile-arg> (idx, exp)
@@ -354,10 +338,9 @@ rules // Exp
 	    (val_instr, val_exp) := <compile-exp> val;
 	    set_instr := RGR_Set(path, val_exp)
 	
-	compile-exp: IfElse(cond, then, else) -> <flatten-list> [cond_instr, instrs]
+	compile-exp: IfElse(cond, then, else) -> instrs
 	  with
-	    (cond_instr, cond_exp) := <split-init-last> <compile-exp> cond;
-	    instrs := <template-std-exp-if> [cond_exp, <compile-exp> then, <compile-exp> else]
+	    instrs := <template-std-exp-if> [<compile-exp> cond, <compile-exp> then, <compile-exp> else]
 	  	 
 	compile-exp: Let(binds, body) -> <flatten-list> [instrs, var_a]
 	  with

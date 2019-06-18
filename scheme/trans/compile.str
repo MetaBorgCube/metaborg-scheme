@@ -23,5 +23,5 @@ rules
   compile:
     (node, _, _, path, project-path) -> (filename, result)
     with
-      filename := <guarantee-extension(|"stc")> path
+      filename := <guarantee-extension(|"dnx.rgr")> path
     ; result   := <pp-framevm> <compile-to-fvm> node
