@@ -30,7 +30,7 @@ rules // Templating
     dnx-apply-template(|args): (template, labels, vars) -> templated
       with
 	    labels_map := <zip>(labels, <map(newname)> labels);
-	    vars_map := <zip>(vars, <map((\ _ -> <newname> "g_" \))> vars);
+	    vars_map := <zip>(vars, <map((\ _ -> <newname> "t_" \))> vars);
 	    argument_map := <flatten-list> <map-with-index(dnx-template-arg-create-map)> args;
 	    templated := <flatten-list> <foldl(dnx-fold-template)> (<concat> [labels_map, vars_map, argument_map], template)
    
@@ -167,7 +167,8 @@ rules // Actual wildcard application
 
 rules // Helper functions 
     dnx-sequence(s): exps -> <flatten-list; mapconcat(s)> exps
-    dnx-next-assign-var: _ -> DNX_AssignVar(<newname> "v_")
+    dnx-next-local-assign-var:  _ -> DNX_AssignVar(<newname> "v_")
+    dnx-next-shared-assign-var: _ -> DNX_SharedAssignVar(<newname> "v_")
     
     dnx-execute-in-scope(|lbl, size): term -> <flatten-list> [RGR_Terminal(RGR_ScopeNew(RGR_New(<int-to-string> size), FVM_Link(lbl))), term, RGR_Terminal(RGR_ScopeExit(FVM_Path([FVM_Link(lbl)])))]
   
@@ -177,14 +178,14 @@ rules // Helper functions
     dnx-frame-store(compile-s| frame): args -> <flatten-list> [store_instrs, a_instrs, stored_exps]
       with
         (store_instrs, store_exps) := <unzip> <map(compile-s; split-init-last)> args;
-        var_a := <dnx-next-assign-var>;
+        var_a := <dnx-next-local-assign-var>;
 	  	a_instrs := RGR_Assign(var_a, frame);
 	    
         stored_exps := <map-with-index(\(idx, exp) -> RGR_Terminal(RGR_Set(var_a, FVM_Path([FVM_Slot(<int-to-string><dec> idx)]),exp))\)> store_exps
     
     dnx-frame-store-named(compile-s| frame): args -> [] // TODO
     
-    dnx-assign-sequence(compile-s): exps -> <dnx-exp-sequence-with(compile-s, \c -> RGR_Assign(var, c)\)> with var := <dnx-next-assign-var>
+    dnx-assign-sequence(compile-s): exps -> <dnx-exp-sequence-with(compile-s, \c -> RGR_Assign(var, c)\)> with var := <dnx-next-shared-assign-var>
     dnx-exp-sequence-with(compile-s, s): exps -> <flatten-list> [init_instrs, last_instr_exp]
       with
         (init, last) := <split-init-last> exps;
