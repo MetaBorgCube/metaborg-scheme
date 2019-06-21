@@ -148,7 +148,7 @@ rules // Init
 	  	fvm_init := <template-anon0> [];
 	  	exprs' := <dnx-sequence(compile-topexp)> exprs;
 	  	(exit_instr, exit_exp) := <split-init-last> <template-std-exit-ok>;
-	  	fvm_exit := [RGR_ContTransfer([exit_exp], FVM_Cont("c")), RGR_ContReturn(FVM_Cont("c"))]
+	  	fvm_exit := [RGR_Terminal(RGR_ContTransfer([exit_exp], FVM_Cont("c"))), RGR_ContReturn(RGR_ContGet(FVM_Cont("c")))]
 	 
 rules // TopExp 	
 	compile-topexp: Define(Bind(name,_), val) -> instrs
@@ -183,7 +183,7 @@ rules // TopExp
 	  with
 	  	(val_instrs, val_exp) := <split-init-last> <compile-exp> exp;
 	  	var_a := <dnx-next-local-assign-var>;
-	  	assign_val_instrs := <dnx-execute-in-scope(|"P", 0)> [val_instrs, RGR_Assign(var_a, val_exp)];
+	  	assign_val_instrs := <dnx-execute-in-scope(|"P", 0)> <flatten-list> [val_instrs, RGR_Assign(var_a, val_exp)];
 	  	print_instrs := <template-print> [var_a];
 	    instrs := <template-line> [<flatten-list> [assign_val_instrs, print_instrs]]
 	  	
