@@ -34,7 +34,7 @@ rules // Templating
 	    argument_map := <flatten-list> <map-with-index(dnx-template-arg-create-map)> args;
 	    templated := <flatten-list> <foldl(dnx-fold-template)> (<concat> [labels_map, vars_map, argument_map], template)
    
-    dnx-fold-template: ((from, to), ast) -> <topdown(try(dnx-fold-template-replace(|from, to)))> ast
+    dnx-fold-template: ((from, to), ast) -> <bottomup(try(dnx-fold-template-replace(|from, to)))> ast
     dnx-fold-template-replace(|from, to): from -> to
          
     dnx-template-arg-create-map: (idx, arg) -> [(DNX_TemplateVar(idx'), arg), (DNX_TemplateVarInit(idx'), init), (DNX_TemplateVarLast(idx'), last)] where <is-list> arg
@@ -167,8 +167,8 @@ rules // Actual wildcard application
 
 rules // Helper functions 
     dnx-sequence(s): exps -> <flatten-list; mapconcat(s)> exps
-    dnx-next-local-assign-var:  _ -> DNX_AssignVar(<newname> "v_")
-    dnx-next-shared-assign-var: _ -> DNX_SharedAssignVar(<newname> "v_")
+    dnx-next-local-assign-var:  _ -> DNX_AssignVar(<newname> "l_")
+    dnx-next-shared-assign-var: _ -> DNX_SharedAssignVar(<newname> "s_")
     
     dnx-execute-in-scope(|lbl, size): term -> <flatten-list> [RGR_Terminal(RGR_ScopeNew(RGR_New(<int-to-string> size), FVM_Link(lbl))), term, RGR_Terminal(RGR_ScopeExit(FVM_Path([FVM_Link(lbl)])))]
   
