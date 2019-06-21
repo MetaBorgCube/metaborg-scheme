@@ -42,7 +42,7 @@ rules // Templating
         idx':= <dec> idx;
         (init, last) := <split-init-last> arg
       
-    dnx-template-arg-create-map: (idx, arg) -> (DNX_TemplateVar(idx'), arg) 
+    dnx-template-arg-create-map: (idx, arg) -> (DNX_TemplateVarLast(idx'), arg) 
       with 
         idx':= <dec> idx
     
@@ -219,7 +219,7 @@ rules // Imported templates
 	  with
 	    labels := ["THEN", "ELSE", "CONT"];
 	    template := [
-	  		RGR_JumpZ(DNX_TemplateVar(0), FVM_Label("ELSE"), FVM_Label("THEN")),
+	  		RGR_JumpZ(DNX_TemplateVarLast(0), FVM_Label("ELSE"), FVM_Label("THEN")),
 	  		
 	  		FVM_Label("THEN"),
 	  		DNX_TemplateVar(1),
@@ -257,61 +257,61 @@ rules // Imported templates
 	template-std-ineg: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
 	    template := [
-	  		RGR_INeg(DNX_TemplateVar(0))
+	  		RGR_INeg(DNX_TemplateVarLast(0))
 	    ]
 	    
 	template-std-iadd: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
 	    template := [
-	  		RGR_IAdd(DNX_TemplateVar(0), DNX_TemplateVar(1))
+	  		RGR_IAdd(DNX_TemplateVarLast(0), DNX_TemplateVarLast(1))
 	    ]
 	    
 	template-std-isub: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
 	    template := [
-	  		RGR_ISub(DNX_TemplateVar(0), DNX_TemplateVar(1))
+	  		RGR_ISub(DNX_TemplateVarLast(0), DNX_TemplateVarLast(1))
 	    ]
 	    
 	template-std-imul: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
 	    template := [
-	  		RGR_IMul(DNX_TemplateVar(0), DNX_TemplateVar(1))
+	  		RGR_IMul(DNX_TemplateVarLast(0), DNX_TemplateVarLast(1))
 	    ]
 	    
 	template-std-idiv: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
 	    template := [
-	  		RGR_IDiv(DNX_TemplateVar(0), DNX_TemplateVar(1))
+	  		RGR_IDiv(DNX_TemplateVarLast(0), DNX_TemplateVarLast(1))
 	    ]
 	    
 	template-std-ilt: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
 	    template := [
-	  		RGR_ILt(DNX_TemplateVar(0), DNX_TemplateVar(1))
+	  		RGR_ILt(DNX_TemplateVarLast(0), DNX_TemplateVarLast(1))
 	    ]
 	    
 	template-std-igt: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
 	    template := [
-	  		RGR_IGt(DNX_TemplateVar(0), DNX_TemplateVar(1))
+	  		RGR_IGt(DNX_TemplateVarLast(0), DNX_TemplateVarLast(1))
 	    ]
 	    
 	template-std-ieq: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
 	    template := [
-	  		RGR_IEq(DNX_TemplateVar(0), DNX_TemplateVar(1))
+	  		RGR_IEq(DNX_TemplateVarLast(0), DNX_TemplateVarLast(1))
 	    ]
 	    
 	template-std-ior: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
 	    template := [
-	  		RGR_IOr(DNX_TemplateVar(0), DNX_TemplateVar(1))
+	  		RGR_IOr(DNX_TemplateVarLast(0), DNX_TemplateVarLast(1))
 	    ]
 	    
 	template-std-iand: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
 	    template := [
-	  		RGR_IAnd(DNX_TemplateVar(0), DNX_TemplateVar(1))
+	  		RGR_IAnd(DNX_TemplateVarLast(0), DNX_TemplateVarLast(1))
 	    ]
 	    
 	template-std-true: args -> <dnx-apply-template(|args)> (template, [], [])
@@ -329,6 +329,6 @@ rules // Imported templates
 	template-std-int: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
 	    template := [
-	  		RGR_ILoad(DNX_TemplateVar(0))
+	  		RGR_ILoad(DNX_TemplateVarLast(0))
 	    ]
 	

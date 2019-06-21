@@ -65,7 +65,6 @@ rules // Templates
     template-print: args -> <dnx-apply-template(|args)> (template, [], [])
 	  with
 	    template := [
-	        DNX_TemplateVarInit(0),
 	  		RGR_Terminal(RGR_Print(DNX_TemplateVarLast(0)))
 	  	]
 
@@ -110,7 +109,7 @@ rules // Templates
 	    labels := ["CONT", "LAMBDA"];
 	    vars := ["a", "b"];
 	    template := [
-	        RGR_Assign(DNX_AssignVar("a"), RGR_New(DNX_TemplateVar(0))),
+	        RGR_Assign(DNX_AssignVar("a"), RGR_New(DNX_TemplateVarLast(0))),
 	        RGR_Terminal(RGR_Link(DNX_AssignVar("a"), FVM_Self(), FVM_Link("P"))),
 	        RGR_Assign(DNX_SharedAssignVar("b"), RGR_ClosNew(DNX_AssignVar("a"), FVM_Label("LAMBDA"), "1")),
 	  		RGR_Jump(FVM_Label("CONT")),
