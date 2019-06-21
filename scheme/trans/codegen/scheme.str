@@ -342,19 +342,31 @@ rules // Exp
 	  with
 	    instrs := <template-std-exp-if> [<compile-exp> cond, <compile-exp> then, <compile-exp> else]
 	  	 
-//	compile-exp: Let(binds, body) -> <flatten-list> [instrs, var_a]
-//	  with
-//	    var_a := <dnx-next-assign-var>;
-//	    a_instr := RGR_Assign(var_a, <compile-exp> RGR_ScopeGetCurrent());
-//	    
-//	    var_b := <dnx-next-assign-var>;
-//	    (body_instr, body_exp) := <dnx-assign-sequence(compile-exp)> body;
-//	    b_instr := RGR_Assign(var_b, body_exp);
-//	    
-//	    store_instr := <dnx-frame-store(compile-arg | var_b)> binds;
-//	    instrs := <dnx-execute-in-scope(|"P", <length> binds)> <flatten-list> [a_instr, body_instr, a_instr]
-	  	
-	
+	compile-exp: Let(binds, body) -> <flatten-list> [frame_instr, store_instr, newscope_instr, body_instr, b_instr, exitscope_instr, var_b]
+	  with
+	    var_a := <dnx-next-shared-assign-var>;
+	    scope_lbl := FVM_Link("P");
+	    frame_instr := [
+	    	RGR_Assign(var_a, RGR_New(<int-to-string><length> binds)),
+	    	RGR_Terminal(RGR_Link(var_a, FVM_Self(), scope_lbl))
+	    ];
+	    store_instr := <dnx-frame-store(compile-bind-exp| var_a)> binds;
+	    newscope_instr := RGR_Terminal(RGR_ScopeSetCurrent(var_a));
+	    (body_instr, body_exp) := <split-init-last> <dnx-assign-sequence(compile-exp)> body;
+	    
+	    var_b := <dnx-next-local-assign-var>;	    	
+		b_instr := RGR_Assign(var_b, body_exp);
+		exitscope_instr := RGR_Terminal(RGR_ScopeExit(FVM_Path([scope_lbl])))
+		
+		
+		
 	compile-exp: Bool("#f") -> <template-std-false> []
 	compile-exp: Bool("#t") -> <template-std-true> []
 	compile-exp: Num(val)   -> <template-std-int> [val]
+	
+rules
+	compile-bind-exp: Bind(Bind(ref, _), val) -> val_instr
+	  with
+	    val_instr := <compile-exp> val
+	    
+	    
