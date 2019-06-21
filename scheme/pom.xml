@@ -70,5 +70,12 @@
   		<scope>runtime</scope>
 		<type>spoofax-language</type>
   	</dependency>
+  	<dependency>
+  		<groupId>org.metaborg</groupId>
+  		<artifactId>lang.dynamix</artifactId>
+  		<version>0.1.0-SNAPHOT</version>
+  		<scope>runtime</scope>
+		<type>spoofax-language</type>
+  	</dependency>
   </dependencies>
 </project>

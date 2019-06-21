@@ -13,8 +13,10 @@ imports
   desugar/-
 
 imports
-  codegen/dnx-stdlib
-   
+  dynamix/dnx-common
+  dynamix/dnx-stdlib
+  dynamix/dnx-templates
+
 rules // Toplevel rule
 	compile-to-fvm: ast -> ast'
 	  with
