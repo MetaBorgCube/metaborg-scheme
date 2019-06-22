@@ -70,6 +70,7 @@ init: Program(exps) ^(c, x) -> c with exit
     
 topexp: Define(Bind(name, _), val) ^(c) -> continue
   where
+    register-slots [name];			// This should not be needed as the `<-` operator can fix this
     template (
 	    P{
 	      val' := exp val^(c)
