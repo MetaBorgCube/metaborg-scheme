@@ -20,7 +20,7 @@ imports
 rules // Toplevel rule
 	compile-to-fvm: ast -> ast'
 	  with
-	    _ := <dnx-init-idx-map>;
+	    <dnx-init-static-maps> ast;
 	    initial_scope_size := 1;
 	    header := [FVM_InitSize(<int-to-string> initial_scope_size), FVM_ContAlias(FVM_Cont("n"), "1"), FVM_LinkAlias(FVM_Link("Q"), "1")]
 	  where
@@ -156,7 +156,6 @@ rules // Init
 rules // TopExp 	
 	compile-topexp: Define(name, val) -> instrs
 	  with
-	    <dnx-register-termidx(|"Var")> [name];
 	  	(val_instrs, val_exp) := <split-init-last> <compile-exp> val;
 	  	var_a := <dnx-next-local-assign-var>;
 	    assign_val_instrs := <dnx-execute-in-scope(|"P", 0)> [val_instrs, RGR_Assign(var_a, val_exp)];
@@ -282,36 +281,37 @@ rules // Exp
 	  	
 	compile-exp: EmptyList() -> <template-mk-empty-cons-list> []
 	
-	compile-exp: FunApp([func|args]) -> <flatten-list> [func_instr, a_instr, b_instr, store_instr, call_func, c_instr]
+	compile-exp: FunApp([func|args]) -> <flatten-list> [func_instr, a_instr, b_instr, c_instr, store_instr, call_func, d_instr]
 	  with
 	    var_a := <dnx-next-shared-assign-var>;
 	  	(func_instr, func_exp) := <split-init-last> <compile-exp> func;
 	    a_instr := RGR_Assign(var_a, func_exp);
 	    
-	    var_b := <dnx-next-local-assign-var>;
+	    var_b := <dnx-next-shared-assign-var>;
 	    b_instr := [
 	    	RGR_Assign(var_b, RGR_ClosToCont(var_a)),
 	    	RGR_Stmt(RGR_ContSet(var_b, FVM_Cont("c"), RGR_ContThis()))
 	    ];
-	    store_instr := <dnx-cont-store(compile-exp | var_b)> args;
+	    
+	    var_c := <dnx-next-shared-assign-var>;
+	    c_instr := [
+	    	RGR_Assign(var_c, RGR_ContUnpack(var_b))
+	    ];
+		store_instr := <dnx-store-in-frame(compile-exp|var_c)> args;
 	  	
 	  	lbl := FVM_Label(<newname> "CONT");
 	  	call_func := [RGR_ContCall(var_b, lbl), lbl];
-	  	var_c := <dnx-next-local-assign-var>;
-	    c_instr := [
-	    	RGR_OnReturn([var_c], RGR_ContRGet()),
-	    	var_c 
+	  	var_d := <dnx-next-local-assign-var>;
+	    d_instr := [
+	    	RGR_OnReturn([var_d], RGR_ContRGet()),
+	    	var_d 
 	    ]
 
-	compile-exp: Lambda(args, body) -> <flatten-list> [args_instr, instrs]
+	compile-exp: Lambda(args, body) -> instrs
 	  with
-	    args_instr := <dnx-sequence(compile-register-lambda-args)> args;
 	    body_instr_exp := <dnx-assign-sequence(compile-exp)> body;
 	    instrs := <template-mk-lambda> [<int-to-string><length> args, body_instr_exp]
 	
-	compile-register-lambda-args: name -> []
-	  with
-	    <dnx-store-name(|"Var")> name
 	    
 //	compile-exp: Callcc(func) -> <concat> [make_cont, prep_func, store_arg, call_func, func_body, precont, return]
 //	  where
@@ -329,9 +329,9 @@ rules // Exp
 //	  	return    := []
 ////	  	return    := [FVM_Label(cont_name), STC_Get(FVM_Path([FVM_SlotR()]))]
 
-	compile-exp: Ref(name) -> [RGR_Get(path)]
+	compile-exp: Ref(name) -> [instr]
 	  with
-		path := <dnx-resolve-name(|"Var")> name
+		instr := RGR_Get(<dnx-resolve-name(|"Var")> name)
 		
 	compile-exp: Set(Ref(name), val) -> <flatten-list> [a_instr, val_instr, set_instr, var_a]
 	  with
@@ -360,8 +360,7 @@ rules // Exp
 	
 rules
 	compile-bind-exp: Bind(ref, val) -> <flatten-list> [val_instr, set_instr]
-	  with
-	    <dnx-store-name(|"Var")> ref;	    
+	  with	    
 	    (val_instr, val_exp) := <split-init-last> <compile-exp> val;
 		path := <dnx-resolve-name(|"Var")> ref;
 	    set_instr := RGR_Stmt(RGR_Set(path, val_exp))
