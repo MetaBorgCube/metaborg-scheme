@@ -26,12 +26,11 @@ rules
     
   FoldExpr[[ [] ^(_)]].
   
-  FoldExpr [[ [Define(Bind(var, idx), val) | t] ^(p) ]] :=
+  FoldExpr [[ [Define(var, val) | t] ^(p) ]] :=
 	new e, e ---> p,
 	Expr [[val ^(e)]],
 	new d, d ---> p,
   	Var{var} <- d,
-  	Var{var}.index := idx,
 	distinct/name W(d)/Var | error $[Redefinition of variable [var], there must be a problem with desugaring] @var,
   	FoldExpr [[t ^(d)]].
   	
@@ -85,17 +84,15 @@ rules
   	Map1(Bind) [[binds ^(lam)]],
   	Map1(Expr) [[body  ^(lam)]].
   	
-  Bind [[ Bind(Bind(name, idx), val) ^(s, p) ]] :=
+  Bind [[ Bind(name, val) ^(s, p) ]] :=
   	Var{name} <- s,
-  	Var{name}.index := idx,
 	distinct/name W(s)/Var | warning $[Redefinition of variable] @NAMES,
 	Expr [[val ^(p)]].
 	
-  Bind [[ Bind(name, idx) ^(s) ]] :=
-  	Var{name} <- s,
-  	Var{name}.index := idx,
+  Bind [[ name ^(s) ]] :=
+    Var{name} <- s,
 	distinct/name W(s)/Var | warning $[Redefinition of variable] @NAMES.
-  	
+	    
   Expr [[ Ref(name) ^(s) ]] :=
   	Var{name} -> s,
   	Var{name} |-> d | error $[Variable [name] is not defined] @name.

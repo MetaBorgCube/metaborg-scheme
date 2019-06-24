@@ -58,51 +58,41 @@ init: Program(exps) ^(c, x) -> c with exit
       link(a, [], Q)
       b <- cnew(a, LINE, 1)
       set([0], b)
-      cset(b, c, cget(c))
+      cset(b, c', cget(c))
       cret(b)
       
      LINE:
       local := 99
     ]] with LINE;
     
-    sequence topexp exps^(c);		// Technically (c) is different than the (c) in the signature..
+    sequence topexp exps^(c');		// Technically (c) is different than the (c) in the signature..
     exit := template () in __exit-ok
     
 topexp: Define(Bind(name, _), val) ^(c) -> continue
   where
-    register-slots [name];			// This should not be needed as the `<-` operator can fix this
+//    register-slots [name];			// This should not be needed as the `<-` operator can fix this
     template (
-	    P{
-	      val' := exp val^(c)
-	    };
-	    name <- val'
+	    name <- exp val^(c)
 	) in line-assign
     
 topexp: Redefine(name, val) ^(c) -> continue
   where
     template (
-	    P{
-	      val' := exp val^(c)
-	    };
-	    name <- val'
+	    name <- exp val^(c)
 	) in line
 
     
 topexp: lambda@Lambda(args, body) ^(c) -> continue
   where
     template (
-	    P{
-	      val' := exp lambda^(c)
-	    }
+	    val' := exp lambda^(c)
 	) in line
 
     
 topexp: exp ^(c) -> continue
   where
     template (
-	    P{
-	      val' := exp exp^(c);
-	    };
+	    val' := exp exp^(c);
 	    template (val') in __print
 	) in line;
 
@@ -241,9 +231,14 @@ exp: FunApp([func|args])^(c) -> continue with val
 
 exp: Lambda(args, body)^(c) -> continue with val
   where
-    body' := sequence exp body ^(c);
-    clos := new-clos length(args) body';
+    sequence register-lambda-args args^(c);
+    body' ::= sequence exp body ^(c);
+    clos := new-clos body'^(_);	// How to determine the continuation count
 
+register-lambda-args: Var(name) -> continue
+  where
+    name <- val
+    
 exp: Ref(ref)^(c) -> continue with val
   where
     val := resolve ref;
@@ -274,9 +269,8 @@ exp: Num(val) ^(c) -> continue with val
     
 exp: Let(binds, body) ^(c) -> continue with val	
   where
-    let bind-exp binds^(c) in P{
-      val := sequence exp body ^(c)
-    };
+    sequence bind-exp binds^(c);
+    val := sequence exp body ^(c)
     
     
 bind-exp: Bind(name, val)^(c) -> continue

@@ -12,7 +12,7 @@ signature
     EmptyList: S
     
 rules
-	desugar = desugar-define; desugar-bind-all
+	desugar = desugar-define; desugar-letstar-all
 	
 	
 	
@@ -28,99 +28,9 @@ rules
 	desugar-define: (Define(name, val), (body, defines)) -> (<concat>[body, [Define(name, val)]], [name | defines])
 	
 	desugar-define: (e, (body, defines)) -> (<concat>[body, [e]], defines)
-	  	
-	  	
-	  	
-	desugar-bind-all: Program(body) -> Program(body_out)
-	  where
-	  	(body_out, _) := <foldl(desugar-bind-top)> (body, ([], 0))
-	  	
-	desugar-bind-top: (Define(name, val), (body, idx)) -> (<concat>[body, [Define(Bind(name, 0), d_val)]], d_idx)
-	  where
-	  	(d_val, d_idx) := <desugar-bind> (val, 1)
-	  	
-	desugar-bind-top: (Redefine(name, val), (body, idx)) -> (<concat>[body, [Redefine(name, d_val)]], d_idx)
-	  where
-	  	(d_val, d_idx) := <desugar-bind> (val, idx)
-	  	
-	desugar-bind-top: (exp, (body, idx)) -> (<concat>[body, [d_exp]], d_idx)
-	  where
-	  	(d_exp, d_idx) := <desugar-bind> (exp, idx)
-	  	
-	desugar-bind: (IfElse(cond, then, else), idx) -> (IfElse(d_cond, d_then, d_else), e_idx)
-	  where
-	  	(d_cond, c_idx) := <desugar-bind> (cond, idx);
-	  	(d_then, t_idx) := <desugar-bind> (then, c_idx);
-	  	(d_else, e_idx) := <desugar-bind> (else, t_idx)
-	  	
-	  	
-	desugar-bind: (UnOp(op, exp), idx) -> (UnOp(op, d_exp), d_idx)
-	  where
-	  	(d_exp, d_idx) := <desugar-bind> (exp, idx)
-	  	
-	desugar-bind: (BinOp(Conz(), l, r), idx) -> (Conss(d_l, d_r), r_idx)
-	  where
-	  	(d_l, l_idx) := <desugar-bind> (l, idx);
-	  	(d_r, r_idx) := <desugar-bind> (r, l_idx)
-	  	
-	desugar-bind: (BinOp(op, l, r), idx) -> (BinOp(op, d_l, d_r), r_idx)
-	  where
-	  	(d_l, l_idx) := <desugar-bind> (l, idx);
-	  	(d_r, r_idx) := <desugar-bind> (r, l_idx)
-	  	
-	desugar-bind: (Lambda(args, body), idx) -> (Lambda(binds, d_body), idx)
-	  where
-	  	(binds, body_idx) := <foldl(desugar-bind-args)> (args, ([], 0));
-	  	(d_body, _) := <desugar-bind-seq> (body, body_idx)
-	  	
-	desugar-bind: (LetStar([bind], body), idx) -> <desugar-bind> (Let([bind], body), idx)
-	desugar-bind: (LetStar([bind|bind_t], body), idx) -> <desugar-bind> (Let([bind], [LetStar(bind_t, body)]), idx)
 	
-	desugar-bind: (Let(binds, body), idx) -> (Let(d_binds, d_body), idx)
-	  where
-	  	(d_binds, body_idx) := <foldl(desugar-bind-args)> (binds, ([], 0));
-	  	(d_body, _) := <desugar-bind-seq> (body, body_idx)
+	desugar-letstar-all = topdown(try(desugar-letstar))
+	desugar-letstar: LetStar([h], body) -> Let([h], body)
+	desugar-letstar: LetStar([h|tail], body) -> Let([h], LetStar(tail, body)) where <geq> (1, <length> tail)
 	
-	desugar-bind: (Quote(FunApp([])), idx) -> (EmptyList(), idx)
-	desugar-bind: (FunApp([Ref("list")]), idx) -> (EmptyList(), idx)
-	desugar-bind: (FunApp([Ref("list") | vals]), idx) -> (d_conslist, d_idx)
-	  where
-	  	conslist := <foldr(!EmptyList(), desugar-cons)> vals;
-	  	(d_conslist, d_idx) := <desugar-bind> (conslist, idx)
-	  	
-	desugar-bind: (Conss(h, t), idx) -> (Conss(d_h, d_t), t_idx)
-	  where
-	  	(d_h, h_idx) := <desugar-bind> (h, idx);
-	  	(d_t, t_idx) := <desugar-bind> (t, h_idx)
-	  	
-	desugar-bind: (EmptyList(), idx) -> (EmptyList(), idx)
-	  	
-	desugar-cons: (elem, tail) -> Conss(elem, tail)
-	  	
-	desugar-bind: (FunApp(items), idx) -> (FunApp(d_items), d_idx)
-	  where
-	  	(d_items, d_idx) := <desugar-bind-seq> (items, idx)
-	  	
-	desugar-bind: (Set(Ref(name), val), idx) -> (Set(Ref(name), d_val), d_idx)
-	  where
-	  	(d_val, d_idx) := <desugar-bind> (val, <inc> idx)
-		  	
-	desugar-bind: (Callcc(exp), idx)  -> (Callcc(d_exp), d_idx)
-	  where
-	  	(d_exp, d_idx) := <desugar-bind> (exp, idx)
-	  	
-	  	
-	desugar-bind: (Num(n), idx)  -> (Num(n), idx)
-	desugar-bind: (Bool(n), idx) -> (Bool(n), idx)
-	desugar-bind: (Ref(n), idx) -> (Ref(n), idx)
 	
-//	desugar-bind: (e, idx) -> (<debug> e, idx)
-	
-	desugar-bind-args: (Bind(name, val), (args, idx)) -> (<concat> [args, [Bind(Bind(name, idx), val)]], <inc> idx)
-	desugar-bind-args: (name, (args, idx)) -> (<concat> [args, [Bind(name, idx)]], <inc> idx)
-	
-	desugar-bind-seq: (body, idx) -> <foldl(desugar-bind-seq)> (body, ([], idx))
-	desugar-bind-seq: (exp, (list, idx)) -> (<concat> [list, [d_exp]], d_idx)
-      where
-	  	(d_exp, d_idx) := <desugar-bind> (exp, idx)
-	  	
