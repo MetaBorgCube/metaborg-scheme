@@ -20,7 +20,8 @@ imports
 rules // Toplevel rule
 	compile-to-fvm: ast -> ast'
 	  with
-	    <dnx-init-static-maps> ast;
+	    <dnx-init-maps> ast;
+	    <dnx-set-slot-namespaces> ["Var"];
 	    initial_scope_size := 1;
 	    header := [FVM_InitSize(<int-to-string> initial_scope_size), FVM_ContAlias(FVM_Cont("n"), "1"), FVM_LinkAlias(FVM_Link("Q"), "1")]
 	  where
