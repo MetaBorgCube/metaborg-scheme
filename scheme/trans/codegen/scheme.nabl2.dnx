@@ -9,7 +9,7 @@ rules
   top-exp: Define(var, val) cf ^(s) -> cf^(d)
 	where
 	  new e; e ---> s;
-	  val' := expr val in cf^(e);
+	  val' := exp val in cf^(e);
 	  new d; d ---> s;
   	  var^(d) <- val'
   	
