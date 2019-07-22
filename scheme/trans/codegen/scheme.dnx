@@ -1,7 +1,7 @@
 module dynamic-semantics
 
 rules
-  map[term -> instr]:: term -> instr 
+  map[ast -> instr]:: ast -> instr 
   map[X]([e]) =
     X(e)
     
@@ -9,7 +9,29 @@ rules
     X(h);
     map[X](t)
 
-
-  eval:: term -> instr
+  exit:: val -> return
+  exit(code) =
+    rcf <- getCF(curCF(), $ret);
+    push(code, rcf);
+    returnCF(rcf)
+    
+  eval:: ast -> instr
   eval(Program(exps)) = 
-  	map[eval-top](exps)
+  	map[eval-top](exps);
+  	exit(int(0))
+ 
+  eval-top:: ast -> instr
+  eval-top(exp) = 
+    print(eval-exp(exp))
+    
+  eval-binop:: ast -> val -> val -> val
+  eval-binop(Add(), l, r) = 
+    return(iadd(l, r))
+  
+  eval-exp:: ast -> val
+  eval-exp(Num(v)) = return(int(v))
+  
+  eval-exp(BinOp(op, left, right)) =
+    v1 <- eval-exp(left);
+    v2 <- eval-exp(right);
+    return(eval-binop(op, v1, v2))

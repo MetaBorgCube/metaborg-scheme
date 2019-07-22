@@ -4,7 +4,6 @@ imports
 
   Syntax
   Analysis
-  Compile
   dynamix/Compile
 
 language
