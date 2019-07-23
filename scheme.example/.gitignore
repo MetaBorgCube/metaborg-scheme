@@ -18,5 +18,5 @@
 *.aterm
 *.value
 *.pp.scm
-*.stc*
+*.dnx.rgr
 *.dot
