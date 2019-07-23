@@ -7,6 +7,8 @@ imports
   pp
   outline
   analysis
+  
+  dynamix/compile
 
 rules // Debugging
   
