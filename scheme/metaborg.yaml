@@ -7,6 +7,7 @@ dependencies:
   - org.metaborg:org.metaborg.meta.lang.template:${metaborgVersion}
   - org.metaborg:org.metaborg.meta.nabl2.lang:${metaborgVersion}
   - org.metaborg:dynsem:${metaborgVersion}
+  - org.metaborg:lang.dynamix:0.1.0-SNAPSHOT
   source:
   - org.metaborg:lang.dynamix:0.1.0-SNAPSHOT
   - org.metaborg.lang:framevm:1.1.0
