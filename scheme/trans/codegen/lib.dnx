@@ -1,0 +1,16 @@
+module lib
+
+rules
+  map[ast -> instr]:: ast -> instr 
+  map[X]([e]) =
+    X(e)
+    
+  map[X]([h|t]) =
+    X(h);
+    map[X](t)
+
+  exit:: val -> return
+  exit(code) =
+    rcf <- getCF(curCF(), $ret);
+    push(code, rcf);
+    returnCF(rcf)

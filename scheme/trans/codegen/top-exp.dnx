@@ -1,25 +1,9 @@
-module dynamic-semantics
+module top-exp
+
+imports
+  expression
 
 rules
-  map[ast -> instr]:: ast -> instr 
-  map[X]([e]) =
-    X(e)
-    
-  map[X]([h|t]) =
-    X(h);
-    map[X](t)
-
-  exit:: val -> return
-  exit(code) =
-    rcf <- getCF(curCF(), $ret);
-    push(code, rcf);
-    returnCF(rcf)
-    
-  eval:: ast -> instr
-  eval(Program(exps)) = 
-  	map[eval-top](exps);
-  	exit(int(0))
- 
   eval-top:: ast -> instr
   eval-top(Define(name, exp)) = 
     // Evaluate exp in a fresh scope
@@ -64,18 +48,3 @@ rules
     
     newscope <- get(cur(), [&P]);
     mkcur(newscope)
-    
-  eval-binop:: ast -> val -> val -> val
-  eval-binop(Add(), l, r) = iadd(l, r)
-  eval-binop(Sub(), l, r) = isub(l, r)
-  
-  eval-exp:: ast -> val
-  eval-exp(Num(v))     = return(int(v))
-  eval-exp(Bool("#t")) = return(int(1))
-  eval-exp(Bool("#f")) = return(int(0))
-  eval-exp(Ref(name))  = return(get(cur(), resolve(name)))
-  
-  eval-exp(BinOp(op, left, right)) =
-    v1 <- eval-exp(left);
-    v2 <- eval-exp(right);
-    return(eval-binop(op, v1, v2))

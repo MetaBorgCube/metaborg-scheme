@@ -1,0 +1,11 @@
+module dynamic-semantics
+
+imports
+  lib
+  top-exp
+
+rules
+  eval:: ast -> instr
+  eval(Program(exps)) = 
+  	map[eval-top](exps);
+  	exit(int(0))
