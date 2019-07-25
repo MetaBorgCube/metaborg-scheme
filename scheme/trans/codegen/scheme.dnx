@@ -21,8 +21,49 @@ rules
   	exit(int(0))
  
   eval-top:: ast -> instr
+  eval-top(Define(name, exp)) = 
+    // Evaluate exp in a fresh scope
+    // We don't strictly need this, 
+    // but we need to follow the Nabl2 spec
+    newscope <- new(int(0));
+    link(newscope, [], &P);
+    mkcur(newscope);
+    
+    v1 <- eval-exp(exp);
+    
+    newscope <- get(cur(), [&P]);
+    mkcur(newscope);
+    
+    path <- resolve(name);
+    scope <- new(int(1));
+    link(scope, [], &P);
+    mkcur(scope);
+    set(scope, path, v1)
+    
+  eval-top(Redefine(name, exp)) =
+    // Evaluate exp in a fresh scope 
+    newscope <- new(int(0));
+    link(newscope, [], &P);
+    mkcur(newscope);
+    
+    v1 <- eval-exp(exp);
+    
+    newscope <- get(cur(), [&P]);
+    mkcur(newscope);
+    
+    path <- resolve(name);
+    set(cur(), path, v1)
+    
   eval-top(exp) = 
-    print(eval-exp(exp))
+    // Evaluate exp in a fresh scope
+    newscope <- new(int(0));
+    link(newscope, [], &P);
+    mkcur(newscope);
+    
+    print(eval-exp(exp));
+    
+    newscope <- get(cur(), [&P]);
+    mkcur(newscope)
     
   eval-binop:: ast -> val -> val -> val
   eval-binop(Add(), l, r) = iadd(l, r)
@@ -32,6 +73,7 @@ rules
   eval-exp(Num(v))     = return(int(v))
   eval-exp(Bool("#t")) = return(int(1))
   eval-exp(Bool("#f")) = return(int(0))
+  eval-exp(Ref(name))  = return(get(cur(), resolve(name)))
   
   eval-exp(BinOp(op, left, right)) =
     v1 <- eval-exp(left);
