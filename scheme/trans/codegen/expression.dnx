@@ -5,8 +5,33 @@ rules
   eval-binop(Add(), l, r) = iadd(l, r)
   eval-binop(Sub(), l, r) = isub(l, r)
   
+  eval-binop(Conz(), l, r) = 
+    list <- new(int(2));
+    set(list, [0], l);
+    set(list, [1], r);
+    return(list)
+    
+  eval-binop(SetCar(), list, val) = 
+    v1 <- get(list, [0]);
+    set(list, [0], val);
+    return(v1)
+    
+  eval-binop(SetCdr(), list, val) = 
+    v1 <- get(list, [1]);
+    set(list, [1], val);
+    return(v1)
+  
+rules
+  eval-unop:: ast -> val -> val
+  eval-unop(Car(), val) =
+    return(get(val, [0]))
+  eval-unop(Cdr(), val) =
+    return(get(val, [1]))
+  
+rules
   eval-exp:: ast -> val
   eval-exp(Num(v))     = return(int(v))
+  eval-exp(EmptyList())= return(new(int(0)))
   eval-exp(Bool("#t")) = return(int(1))
   eval-exp(Bool("#f")) = return(int(0))
   eval-exp(Ref(name))  = return(get(cur(), resolve(name)))
@@ -15,3 +40,7 @@ rules
     v1 <- eval-exp(left);
     v2 <- eval-exp(right);
     return(eval-binop(op, v1, v2))
+    
+   eval-exp(UnOp(op, exp)) =
+    v1 <- eval-exp(exp);
+    return(eval-unop(op, v1))

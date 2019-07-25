@@ -9,6 +9,7 @@ rules
     X(h);
     map[X](t)
 
+rules
   exit:: val -> return
   exit(code) =
     rcf <- getCF(curCF(), $ret);

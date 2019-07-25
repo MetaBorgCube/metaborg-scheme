@@ -12,7 +12,7 @@ signature
     EmptyList: S
     
 rules
-	desugar = desugar-define; desugar-letstar-all
+	desugar = desugar-define; desugar-letstar-all; desugar-list-all
 	
 	
 	
@@ -28,6 +28,9 @@ rules
 	desugar-define: (Define(name, val), (body, defines)) -> (<concat>[body, [Define(name, val)]], [name | defines])
 	
 	desugar-define: (e, (body, defines)) -> (<concat>[body, [e]], defines)
+	
+	desugar-list-all = topdown(try(desugar-list))
+	desugar-list: Quote(FunApp([])) -> EmptyList()
 	
 	desugar-letstar-all = topdown(try(desugar-letstar))
 	desugar-letstar: LetStar([h], body) -> Let([h], body)
