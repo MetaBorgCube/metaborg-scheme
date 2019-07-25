@@ -4,6 +4,18 @@ rules
   eval-binop:: ast -> val -> val -> val
   eval-binop(Add(), l, r) = iadd(l, r)
   eval-binop(Sub(), l, r) = isub(l, r)
+  eval-binop(Lt(), l, r)  = ilt(l, r)
+  eval-binop(Gt(), l, r)  = igt(l, r)
+  
+  eval-binop(Gte(), l, r)  = 
+    gt <- igt(l, r);
+    eq <- ieq(l,r);
+    return(ior(gt, eq))
+  
+  eval-binop(Lte(), l, r)  = 
+    gt <- ilt(l, r);
+    eq <- ieq(l,r);
+    return(ior(gt, eq))
   
   eval-binop(Conz(), l, r) = 
     list <- new(int(2));
