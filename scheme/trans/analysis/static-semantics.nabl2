@@ -86,12 +86,12 @@ rules
   	
   Bind [[ Bind(name, val) ^(s, p) ]] :=
   	Var{name} <- s,
-	distinct/name W(s)/Var | warning $[Redefinition of variable] @NAMES,
+	distinct/name W(s)/Var | warning $[Redefinition of variable] @name,
 	Expr [[val ^(p)]].
 	
   Bind [[ name ^(s) ]] :=
     Var{name} <- s,
-	distinct/name W(s)/Var | warning $[Redefinition of variable] @NAMES.
+	distinct/name W(s)/Var | warning $[Redefinition of variable] @name.
 	    
   Expr [[ Ref(name) ^(s) ]] :=
   	Var{name} -> s,
