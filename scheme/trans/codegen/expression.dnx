@@ -6,16 +6,9 @@ rules
   eval-binop(Sub(), l, r) = isub(l, r)
   eval-binop(Lt(), l, r)  = ilt(l, r)
   eval-binop(Gt(), l, r)  = igt(l, r)
-  
-  eval-binop(Gte(), l, r)  = 
-    gt <- igt(l, r);
-    eq <- ieq(l,r);
-    return(ior(gt, eq))
-  
-  eval-binop(Lte(), l, r)  = 
-    gt <- ilt(l, r);
-    eq <- ieq(l,r);
-    return(ior(gt, eq))
+  eval-binop(Or(), l, r)  = ior(l, r)
+  eval-binop(And(), l, r) = iand(l, r)
+  eval-binop(Eq(), l, r)  = ieq(l, r)
   
   eval-binop(Conz(), l, r) = 
     list <- new(int(2));
@@ -47,6 +40,22 @@ rules
   eval-exp(Bool("#t")) = return(int(1))
   eval-exp(Bool("#f")) = return(int(0))
   eval-exp(Ref(name))  = return(get(cur(), resolve(name)))
+  
+  eval-exp(BinOp(Gte(), l, r))  = 
+    out <- eval-exp(
+      BinOp(Or(), 
+        BinOp(Gt(), l, r), 
+        BinOp(Eq(), l, r)
+      ));
+    return(out)
+  
+  eval-exp(BinOp(Lte(), l, r))  = 
+    out <- eval-exp(
+      BinOp(Or(), 
+        BinOp(Lt(), l, r), 
+        BinOp(Eq(), l, r)
+      ));
+    return(out)
   
   eval-exp(BinOp(op, left, right)) =
     v1 <- eval-exp(left);
