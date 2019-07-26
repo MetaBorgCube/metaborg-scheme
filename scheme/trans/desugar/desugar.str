@@ -34,6 +34,6 @@ rules
 	
 	desugar-letstar-all = topdown(try(desugar-letstar))
 	desugar-letstar: LetStar([h], body) -> Let([h], body)
-	desugar-letstar: LetStar([h|tail], body) -> Let([h], LetStar(tail, body)) where <geq> (1, <length> tail)
+	desugar-letstar: LetStar([h|tail], body) -> Let([h], [LetStar(tail, body)]) where <geq> (1, <length> tail)
 	
 	
