@@ -56,3 +56,37 @@ rules
    eval-exp(UnOp(op, exp)) =
     v1 <- eval-exp(exp);
     return(eval-unop(op, v1))
+    
+  eval-exp(Let(binds, body)) = 
+    scope <- new(int(length(binds)));
+    link(scope, [], &P);
+    
+    eval-let-binds(binds, scope);
+    mkcur(scope);
+    res <- eval-let-body(body);
+    return(res)
+    
+    
+rules // Let internal rules
+  eval-let-body:: ast -> val
+  eval-let-body([exp]) =
+    v1 <- eval-exp(exp);
+    return(v1)
+      eval-let-body([exp | tail]) =
+    v1 <- eval-exp(exp);
+    return(eval-let-body(tail))
+    
+  eval-let-binds:: ast -> val -> instr
+  // How do we do the empty case?
+  // This would require a nop or something
+  eval-let-binds([Bind(name, val)], scope) = 
+    v1 <- eval-exp(val);
+    path <- resolve(name);
+    set(scope, path, v1)
+    
+  eval-let-binds([Bind(name, val) | tail], scope) = 
+    v1 <- eval-exp(val);
+    set(scope, resolve(name), v1);
+    eval-let-binds(tail, scope)
+    
+    
