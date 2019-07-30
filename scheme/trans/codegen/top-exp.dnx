@@ -3,6 +3,7 @@ module top-exp
 imports
   expression
 
+
 rules
   // In order to follow the Nabl2 specification for Scheme
   // we need to evaluate the expressions used in top-expressions
@@ -21,7 +22,7 @@ rules
     newscope <- get(cur(), [&P]);
     mkcur(newscope);
     
-    path <- resolve(name);
+    path <- resolveVar(name);
     scope <- new(int(1));
     link(scope, [], &P);
     mkcur(scope);
@@ -38,7 +39,7 @@ rules
     newscope <- get(cur(), [&P]);
     mkcur(newscope);
     
-    path <- resolve(name);
+    path <- resolveVar(name);
     set(cur(), path, v1)
     
   eval-top(exp) = 

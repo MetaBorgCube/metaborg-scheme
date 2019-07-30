@@ -1,5 +1,8 @@
 module expression
 
+imports
+  lib
+  
 rules
   eval-binop:: ast -> val -> val -> val
   eval-binop(Add(), l, r) = iadd(l, r)
@@ -39,8 +42,16 @@ rules
   eval-exp(EmptyList())= return(new(int(0)))
   eval-exp(Bool("#t")) = return(int(1))
   eval-exp(Bool("#f")) = return(int(0))
-  eval-exp(Ref(name))  = return(get(cur(), resolve(name)))
+  eval-exp(Ref(name))  = return(get(cur(), resolveVar(name)))
   
+  eval-exp(Set(Ref(name), exp)) = 
+    v1 <- eval-exp(exp);
+    path <- resolveVar(name);
+    v2 <- get(cur(), path);
+    set(cur(), path, v1);
+    return(v2)
+    
+    
   eval-exp(BinOp(Gte(), l, r))  = 
     out <- eval-exp(
       BinOp(Or(), 
@@ -75,27 +86,61 @@ rules
     res <- eval-let-body(body);
     return(res)
     
+  eval-exp(FunApp([func | args])) =
+    lambda <- eval-exp(func);
+    lcf <- closure-to-CF(lambda);
+    setCF(lcf, $ret, curCF());
+    df <- unpackCF(lcf);
+    store-arg(zip-with-index(args), df);
+    callCF(lcf);
+    return(pop(curCF()))
+    
+  eval-exp(Lambda(args, body)) = 
+    df <- new(int(length(args)));
+    link(df, [], &P);
+    
+    b <- <
+      eval-lamb-body(~body)
+    >;
+    lamb <- mk-closure(df, b, int(1));
+    return(lamb)
+    
+  store-arg:: ast -> val -> instr
+  store-arg([], _) = continue()
+  store-arg([(idx, exp) | tail], frame) = 
+    v1 <- eval-exp(exp);
+    set(frame, [idx], v1);
+    store-arg(tail, frame)
     
 rules // Let internal rules
   eval-let-body:: ast -> val
   eval-let-body([exp]) =
     v1 <- eval-exp(exp);
     return(v1)
-      eval-let-body([exp | tail]) =
+      
+  eval-let-body([exp | tail]) =
     v1 <- eval-exp(exp);
     return(eval-let-body(tail))
+    
+  eval-lamb-body:: ast -> return
+  eval-lamb-body([exp]) =
+    v1 <- eval-exp(exp);
+    rcf <- getCF(curCF(), $ret);
+    push(v1, rcf);
+    returnCF(rcf)
+      
+  eval-lamb-body([exp | tail]) =
+    v1 <- eval-exp(exp);
+    eval-lamb-body(tail)
     
   eval-let-binds:: ast -> val -> instr
   // How do we do the empty case?
   // This would require a nop or something
-  eval-let-binds([Bind(name, val)], scope) = 
-    v1 <- eval-exp(val);
-    path <- resolve(name);
-    set(scope, path, v1)
+  eval-let-binds([], scope) = continue()
     
   eval-let-binds([Bind(name, val) | tail], scope) = 
     v1 <- eval-exp(val);
-    set(scope, resolve(name), v1);
+    set(scope, resolveVar(name), v1);
     eval-let-binds(tail, scope)
     
     

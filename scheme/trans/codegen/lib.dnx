@@ -2,12 +2,12 @@ module lib
 
 rules
   map[ast -> instr]:: ast -> instr 
-  map[X]([e]) =
-    X(e)
+  map[x]([]) =
+    continue()
     
-  map[X]([h|t]) =
-    X(h);
-    map[X](t)
+  map[x]([h|t]) =
+    x(h);
+    map[x](t)
 
 rules
   exit:: val -> return
@@ -15,3 +15,6 @@ rules
     rcf <- getCF(curCF(), $ret);
     push(code, rcf);
     returnCF(rcf)
+    
+  resolveVar:: ast -> ast
+  resolveVar(name) = resolve(name, "Var")

@@ -1,7 +1,6 @@
 module dynamic-semantics
 
 imports
-  lib
   top-exp
 
 rules
