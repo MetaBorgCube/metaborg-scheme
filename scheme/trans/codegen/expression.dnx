@@ -77,6 +77,19 @@ rules
     v1 <- eval-exp(exp);
     return(eval-unop(op, v1))
     
+  eval-exp(IfElse(cond, then, else)) =
+    c <- eval-exp(cond);
+    jumpz(c, ELSE, THEN);
+    
+   THEN;
+    v1 <- eval-exp(then);
+    jump(CONT);
+   ELSE;
+    v1 <- eval-exp(else);
+    jump(CONT);
+   CONT;
+    return(v1)
+    
   eval-exp(Let(binds, body)) = 
     scope <- new(int(length(binds)));
     link(scope, [], &P);
