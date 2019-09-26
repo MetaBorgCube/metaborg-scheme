@@ -111,44 +111,7 @@ rules
     set(clos, [0], df);
     set(clos, [1], b);
     set(clos, [2], int(1));
-    return(clos)
-
-//  create-clos(df, code) =
-//  	clos <- new(int(3));
-//  	set(clos, [0], df);
-//    set(clos, [1], code);
-//    set(clos, [2], int(1));
-//    return(clos)
-//  	
-//  call-clos(clos, next_block, args) =
-//  	lcf <- newCF(get(clos, [0]), get(clos, [1]), get(clos, [2]));
-//    setC(lcf, $ret, curC(next_block));
-//    df <- unpackCF(lcf);
-//    store-arg(zip-with-index(args), df);
-//    callCF(lcf, get(clos, [1]))
-//    
-//    
-//  eval-exp(Callcc(func)) = 
-//    cc <- curC(CONT);
-//    
-//    // Create wrapping closure
-//    cc_df <- new(int(2));
-//    set(cc_df, [1], cc);
-//    cc_b <- <
-//    	v <- get(cur(), [0]);
-//    	callC(get(cur(), [1]), v)
-//    >;
-//    clos_cc <- create-clos(cc_df, cc_b);
-//    
-//    // Call the closure
-//    clos <- eval-exp(func);
-//    call-clos(clos, CONT, [clos_cc]);
-//   CONT;
-//    return(get-returnval())
-//    
-//  get-returnval() =
-//    return(pop(curCF()))
-    
+    return(clos)    
     
     eval-exp(Callcc(func)) = 
     cc <- curC(CONT);
@@ -160,7 +123,7 @@ rules
     >;
     
     df <- new(int(2));
-//    link(df, cur(), &P);
+    link(df, cur(), &P);
     set(df, [1], cc);
     
     set(cc_clos, [0], df);
@@ -176,13 +139,8 @@ rules
    CONT;
     print(cur());
     return(pop(curCF()))
-
-//  eval-exp(FunApp([func | args])) =
-//    closure <- eval-exp(func);
-//    call-clos(closure, CONT, args);
-//   CONT;
-//    return(get-returnval())
-    
+  
+  
   eval-exp(FunApp([func | args])) =
     closure <- eval-exp(func);
     lcf <- newCF(get(closure, [0]), get(closure, [1]), get(closure, [2]));
