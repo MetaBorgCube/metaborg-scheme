@@ -21,29 +21,31 @@ rules
 
   init ^ (s) := new s.
 
-  [[ Program(expr) ^ (s) ]] :=
-    FoldExpr[[expr ^(s)]].
+  [[ prog@Program(expr) ^ (s) ]] :=
+    new p, p ---> s,
+    Line{"__NEXT__" @ prog} <- s,
+    FoldExpr[[expr ^(p)]].
     
   FoldExpr[[ [] ^(_)]].
   
-  FoldExpr [[ [Define(var, val) | t] ^(p) ]] :=
-	new e, e ---> p,
-	Expr [[val ^(e)]],
+  FoldExpr [[ [v@Define(var, val) | t] ^(p) ]] :=
+    Line{"__NEXT__"@v} -> p,
+	Expr [[val ^(p)]],
 	new d, d ---> p,
   	Var{var} <- d,
 	distinct/name W(d)/Var | error $[Redefinition of variable [var], there must be a problem with desugaring] @var,
   	FoldExpr [[t ^(d)]].
   	
-  FoldExpr [[ [Redefine(var, val) | t] ^(s) ]] :=
-	new e, e ---> s,
-	Expr [[val ^(e)]],
+  FoldExpr [[ [v@Redefine(var, val) | t] ^(s) ]] :=
+    Line{"__NEXT__"@v} -> s,
+	Expr [[val ^(s)]],
 	Var{var} -> s,
   	Var{var} |-> d | error $[Variable [var] is not defined] @var,
   	FoldExpr [[t ^(s)]].
 	
   FoldExpr [[ [h|t] ^(s)]] :=
-  	new e, e ---> s,
-  	Expr [[h ^(e)]],
+    Line{"__NEXT__"@h} -> s,
+  	Expr [[h ^(s)]],
   	FoldExpr [[t ^(s)]].
 
 

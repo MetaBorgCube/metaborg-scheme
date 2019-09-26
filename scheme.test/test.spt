@@ -3,5 +3,5 @@ module test
 language scheme
 
 test parse [[
-
+ (+ 1 1)
 ]] parse succeeds

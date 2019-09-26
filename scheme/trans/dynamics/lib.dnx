@@ -1,20 +1,24 @@
 module lib
 
 rules
-  map[ast -> instr]:: ast -> instr 
   map[x]([]) =
-    continue()
+    nop()
     
   map[x]([h|t]) =
     x(h);
     map[x](t)
+    
+  zip-with-index(list) =
+    zip--with--index(list, 0)
+  
+  zip--with--index([], idx) = []
+  zip--with--index([h | t], idx) =
+    tail = zip--with--index(t, idx + 1);
+    [(idx, h) | tail]
 
 rules
-  exit:: val -> return
   exit(code) =
-    rcf <- getCF(curCF(), $ret);
-    push(code, rcf);
-    returnCF(rcf)
-    
-  resolveVar:: ast -> ast
+    rcf <- getC(curCF(), $ret);
+    callC(rcf, code)
+  
   resolveVar(name) = resolve(name, "Var")

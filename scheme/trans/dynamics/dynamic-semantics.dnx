@@ -4,15 +4,19 @@ imports
   top-exp
   
 signature
+  init-size = 1
   link-labels
     P
   continuations
     ret
   namespaces
     Var
+    Line
 
 rules
-  eval:: ast -> instr
   eval(Program(exps)) = 
+    scope <- new(int(0));
+    link(scope, [], &P);
+    mkcur(scope);
   	map[eval-top](exps);
   	exit(int(0))

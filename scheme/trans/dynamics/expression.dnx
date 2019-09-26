@@ -4,7 +4,6 @@ imports
   lib
   
 rules
-  eval-binop:: ast -> val -> val -> val
   eval-binop(Add(), l, r) = iadd(l, r)
   eval-binop(Sub(), l, r) = isub(l, r)
   eval-binop(Lt(), l, r)  = ilt(l, r)
@@ -30,14 +29,12 @@ rules
     return(v1)
   
 rules
-  eval-unop:: ast -> val -> val
   eval-unop(Car(), val) =
     return(get(val, [0]))
   eval-unop(Cdr(), val) =
     return(get(val, [1]))
   
 rules
-  eval-exp:: ast -> val
   eval-exp(Num(v))     = return(int(v))
   eval-exp(EmptyList())= return(new(int(0)))
   eval-exp(Bool("#t")) = return(int(1))
@@ -46,7 +43,7 @@ rules
   
   eval-exp(Set(Ref(name), exp)) = 
     v1 <- eval-exp(exp);
-    path <- resolveVar(name);
+    path = resolveVar(name);
     v2 <- get(cur(), path);
     set(cur(), path, v1);
     return(v2)
@@ -91,22 +88,17 @@ rules
     return(v1)
     
   eval-exp(Let(binds, body)) = 
+    o_scope <- cur();
     scope <- new(int(length(binds)));
     link(scope, [], &P);
     
     eval-let-binds(binds, scope);
     mkcur(scope);
     res <- eval-let-body(body);
+    mkcur(o_scope);
     return(res)
     
-  eval-exp(FunApp([func | args])) =
-    lambda <- eval-exp(func);
-    lcf <- closure-to-CF(lambda);
-    setCF(lcf, $ret, curCF());
-    df <- unpackCF(lcf);
-    store-arg(zip-with-index(args), df);
-    callCF(lcf);
-    return(pop(curCF()))
+  
     
   eval-exp(Lambda(args, body)) = 
     df <- new(int(length(args)));
@@ -115,18 +107,100 @@ rules
     b <- <
       eval-lamb-body(~body)
     >;
-    lamb <- mk-closure(df, b, int(1));
-    return(lamb)
+    clos <- new(int(3));
+    set(clos, [0], df);
+    set(clos, [1], b);
+    set(clos, [2], int(1));
+    return(clos)
+
+//  create-clos(df, code) =
+//  	clos <- new(int(3));
+//  	set(clos, [0], df);
+//    set(clos, [1], code);
+//    set(clos, [2], int(1));
+//    return(clos)
+//  	
+//  call-clos(clos, next_block, args) =
+//  	lcf <- newCF(get(clos, [0]), get(clos, [1]), get(clos, [2]));
+//    setC(lcf, $ret, curC(next_block));
+//    df <- unpackCF(lcf);
+//    store-arg(zip-with-index(args), df);
+//    callCF(lcf, get(clos, [1]))
+//    
+//    
+//  eval-exp(Callcc(func)) = 
+//    cc <- curC(CONT);
+//    
+//    // Create wrapping closure
+//    cc_df <- new(int(2));
+//    set(cc_df, [1], cc);
+//    cc_b <- <
+//    	v <- get(cur(), [0]);
+//    	callC(get(cur(), [1]), v)
+//    >;
+//    clos_cc <- create-clos(cc_df, cc_b);
+//    
+//    // Call the closure
+//    clos <- eval-exp(func);
+//    call-clos(clos, CONT, [clos_cc]);
+//   CONT;
+//    return(get-returnval())
+//    
+//  get-returnval() =
+//    return(pop(curCF()))
     
-  store-arg:: ast -> val -> instr
-  store-arg([], _) = continue()
+    
+    eval-exp(Callcc(func)) = 
+    cc <- curC(CONT);
+    
+    cc_clos <- new(int(3));
+    clos_b <- <
+    	v <- get(cur(), [0]);
+    	callC(get(cur(), [1]), v)
+    >;
+    
+    df <- new(int(2));
+//    link(df, cur(), &P);
+    set(df, [1], cc);
+    
+    set(cc_clos, [0], df);
+    set(cc_clos, [1], clos_b);
+    set(cc_clos, [2], int(1));
+    
+    clos <- eval-exp(func);
+    lcf <- newCF(get(clos, [0]), get(clos, [1]), get(clos, [2]));
+    setC(lcf, $ret, cc);
+    df <- unpackCF(lcf);
+    set(df, [0], cc_clos);
+    callCF(lcf, get(clos, [1]));
+   CONT;
+    print(cur());
+    return(pop(curCF()))
+
+//  eval-exp(FunApp([func | args])) =
+//    closure <- eval-exp(func);
+//    call-clos(closure, CONT, args);
+//   CONT;
+//    return(get-returnval())
+    
+  eval-exp(FunApp([func | args])) =
+    closure <- eval-exp(func);
+    lcf <- newCF(get(closure, [0]), get(closure, [1]), get(closure, [2]));
+    setC(lcf, $ret, curC(CONT));
+    df <- unpackCF(lcf);
+    store-arg(zip-with-index(args), df);
+    callCF(lcf, get(closure, [1]));
+   CONT;
+    return(pop(curCF()))
+    
+rules
+  store-arg([], _) = nop()
   store-arg([(idx, exp) | tail], frame) = 
     v1 <- eval-exp(exp);
     set(frame, [idx], v1);
     store-arg(tail, frame)
     
 rules // Let internal rules
-  eval-let-body:: ast -> val
   eval-let-body([exp]) =
     v1 <- eval-exp(exp);
     return(v1)
@@ -134,22 +208,17 @@ rules // Let internal rules
   eval-let-body([exp | tail]) =
     v1 <- eval-exp(exp);
     return(eval-let-body(tail))
-    
-  eval-lamb-body:: ast -> return
+  
   eval-lamb-body([exp]) =
     v1 <- eval-exp(exp);
-    rcf <- getCF(curCF(), $ret);
-    push(v1, rcf);
-    returnCF(rcf)
+    rc <- getC(curCF(), $ret);
+    callC(rc, v1)
       
   eval-lamb-body([exp | tail]) =
     v1 <- eval-exp(exp);
     eval-lamb-body(tail)
-    
-  eval-let-binds:: ast -> val -> instr
-  // How do we do the empty case?
-  // This would require a nop or something
-  eval-let-binds([], scope) = continue()
+
+  eval-let-binds([], scope) = nop()
     
   eval-let-binds([Bind(name, val) | tail], scope) = 
     v1 <- eval-exp(val);

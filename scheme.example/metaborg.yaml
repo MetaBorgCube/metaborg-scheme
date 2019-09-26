@@ -4,6 +4,7 @@ name: scheme
 dependencies:
   compile:
   - org.metaborg.lang:scheme:0.1.0-SNAPSHOT
+  - org.metaborg.lang:framevm:1.2.0
 debug:
   typesmart: false
 runtime:
