@@ -137,8 +137,7 @@ rules
     set(df, [0], cc_clos);
     callCF(lcf, get(clos, [1]));
    CONT;
-    print(cur());
-    return(pop(curCF()))
+    return(pop())
   
   
   eval-exp(FunApp([func | args])) =
@@ -149,7 +148,7 @@ rules
     store-arg(zip-with-index(args), df);
     callCF(lcf, get(closure, [1]));
    CONT;
-    return(pop(curCF()))
+    return(pop())
     
 rules
   store-arg([], _) = nop()

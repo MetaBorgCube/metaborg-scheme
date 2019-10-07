@@ -12,7 +12,7 @@ rules
   
   eval-top(v@Define(name, exp)) =
     line-f <- get(cur(), resolve-scope("__NEXT__"@v, "Line"));
-    set(line-f, [0], !NEXT);
+    set(line-f, [0], NEXT);
     
     val <- eval-exp(exp);
     path = resolveVar(name);
@@ -24,9 +24,9 @@ rules
     jump(get(line-f, [0]));
    NEXT
     
-  eval-top(v@Redefine(name, exp)) = 
+  eval-top(v@Redefine(name, exp)) =
     line-f <- get(cur(), resolve-scope("__NEXT__"@v, "Line"));
-    set(line-f, [0], !NEXT);
+    set(line-f, [0], NEXT);
        
     v1 <- eval-exp(exp);    
     path = resolveVar(name);
@@ -37,7 +37,7 @@ rules
     
   eval-top(v@exp) =
     line-f <- get(cur(), resolve-scope("__NEXT__"@v, "Line"));
-    set(line-f, [0], !NEXT);
+    set(line-f, [0], NEXT);
     print(eval-exp(exp));
     
     jump(get(line-f, [0]));
