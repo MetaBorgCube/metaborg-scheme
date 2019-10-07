@@ -20,6 +20,8 @@ pardonedLanguages:
 - Stratego-Sugar
 - SDF
 
+build:
+- useBuildSystemSpec: true
 
 debug:
   typesmart: false
