@@ -74,18 +74,19 @@ rules
     v1 <- eval-exp(exp);
     return(eval-unop(op, v1))
     
-  eval-exp(IfElse(cond, then, else)) =
+  eval-exp(IfElse(cond, then, else)); k(v1) =
     c <- eval-exp(cond);
-    jumpz(c, ELSE, THEN);
+    jumpz(c, else_b, then_b);
     
-   THEN;
-    v1 <- eval-exp(then);
-    jump(CONT);
-   ELSE;
-    v1 <- eval-exp(else);
-    jump(CONT);
-   CONT;
-    return(v1)
+    !v1;
+    then_b = <
+      ~v1 <- eval-exp(~then);
+      jump(~k)
+    >;
+    else_b = <
+      ~v1 <- eval-exp(~else);
+      jump(~k)
+    >
     
   eval-exp(Let(binds, body)) = 
     o_scope <- cur();
@@ -100,7 +101,8 @@ rules
     
   
     
-  eval-exp(Lambda(args, body)) = 
+  eval-exp(Lambda(args, body)) =
+    map[associate-args](zip-with-index(args));
     df <- new(int(length(args)));
     link(df, [], &P);
     
@@ -113,8 +115,8 @@ rules
     set(clos, [2], int(1));
     return(clos)    
     
-    eval-exp(Callcc(func)) = 
-    cc <- curC(CONT);
+    eval-exp(Callcc(func)); k(pop()) = 
+    cc <- curC(k);
     
     cc_clos <- new(int(3));
     clos_b <- <
@@ -135,22 +137,21 @@ rules
     setC(lcf, $ret, cc);
     df <- unpackCF(lcf);
     set(df, [0], cc_clos);
-    callCF(lcf, get(clos, [1]));
-   CONT;
-    return(pop())
+    callCF(lcf, get(clos, [1]))
   
   
-  eval-exp(FunApp([func | args])) =
+  eval-exp(FunApp([func | args])); k(pop()) =
     closure <- eval-exp(func);
     lcf <- newCF(get(closure, [0]), get(closure, [1]), get(closure, [2]));
-    setC(lcf, $ret, curC(CONT));
+    setC(lcf, $ret, curC(k));
     df <- unpackCF(lcf);
     store-arg(zip-with-index(args), df);
-    callCF(lcf, get(closure, [1]));
-   CONT;
-    return(pop())
+    callCF(lcf, get(closure, [1]))
     
 rules
+   associate-args( (idx, name) ) =
+    associate-index(idx, name, "Var")
+    
   store-arg([], _) = nop()
   store-arg([(idx, exp) | tail], frame) = 
     v1 <- eval-exp(exp);

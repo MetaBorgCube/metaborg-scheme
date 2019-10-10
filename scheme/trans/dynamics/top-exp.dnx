@@ -10,9 +10,9 @@ rules
   // in a new scope.
   // This is not needed from execution point of view.
   
-  eval-top(v@Define(name, exp)) =
+  eval-top(v@Define(name, exp)); k =
     line-f <- get(cur(), resolve-scope("__NEXT__"@v, "Line"));
-    set(line-f, [0], NEXT);
+    set(line-f, [0], k);
     
     val <- eval-exp(exp);
     path = resolveVar(name);
@@ -21,24 +21,22 @@ rules
     mkcur(scope);
     set(scope, path, val);
     
-    jump(get(line-f, [0]));
-   NEXT
+    jump(get(line-f, [0]))
     
-  eval-top(v@Redefine(name, exp)) =
+  eval-top(v@Redefine(name, exp)); k =
     line-f <- get(cur(), resolve-scope("__NEXT__"@v, "Line"));
-    set(line-f, [0], NEXT);
+    set(line-f, [0], k);
        
     v1 <- eval-exp(exp);    
     path = resolveVar(name);
     set(cur(), path, v1);
     
-    jump(get(line-f, [0]));
-   NEXT
+    jump(get(line-f, [0]))
     
-  eval-top(v@exp) =
-    line-f <- get(cur(), resolve-scope("__NEXT__"@v, "Line"));
-    set(line-f, [0], NEXT);
+  eval-top(exp); k =
+    line-f <- get(cur(), resolve-scope("__NEXT__"@exp, "Line"));
+    set(line-f, [0], k);
     print(eval-exp(exp));
     
-    jump(get(line-f, [0]));
-   NEXT
+    jump(get(line-f, [0]))
+    
