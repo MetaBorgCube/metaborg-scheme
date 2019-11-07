@@ -109,16 +109,15 @@ rules
     b <- <
       eval-lamb-body(~body)
     >;
-    clos <- new(int(3));
+    clos <- new(int(2));
     set(clos, [0], df);
     set(clos, [1], b);
-    set(clos, [2], int(1));
     return(clos)    
     
     eval-exp(Callcc(func)); k(pop()) = 
     cc <- curC(k);
     
-    cc_clos <- new(int(3));
+    cc_clos <- new(int(2));
     clos_b <- <
     	v <- get(cur(), [0]);
     	callC(get(cur(), [1]), v)
@@ -130,10 +129,9 @@ rules
     
     set(cc_clos, [0], df);
     set(cc_clos, [1], clos_b);
-    set(cc_clos, [2], int(1));
     
     clos <- eval-exp(func);
-    lcf <- newCF(get(clos, [0]), get(clos, [1]), get(clos, [2]));
+    lcf <- newCF(get(clos, [0]));
     setC(lcf, $ret, cc);
     df <- unpackCF(lcf);
     set(df, [0], cc_clos);
@@ -142,7 +140,7 @@ rules
   
   eval-exp(FunApp([func | args])); k(pop()) =
     closure <- eval-exp(func);
-    lcf <- newCF(get(closure, [0]), get(closure, [1]), get(closure, [2]));
+    lcf <- newCF(get(closure, [0]));
     setC(lcf, $ret, curC(k));
     df <- unpackCF(lcf);
     store-arg(zip-with-index(args), df);
