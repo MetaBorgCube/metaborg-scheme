@@ -28,6 +28,10 @@ rules
     
   FoldExpr[[ [] ^(_)]].
   
+  FoldExpr [[ [Test(exps) | t] ^(p) ]] :=
+  	FoldExpr[[exps ^(p)]],
+  	FoldExpr[[t ^(p)]].
+  	
   FoldExpr [[ [v@Define(var, val) | t] ^(p) ]] :=
     Line{"__NEXT__"@v} -> p,
 	Expr [[val ^(p)]],

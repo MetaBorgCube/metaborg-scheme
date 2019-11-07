@@ -11,6 +11,7 @@ context-free start-symbols
 context-free priorities
 
 context-free syntax
+	Exp.Test = <(test! <Exp+>)>
   	Exp.BinOp = <(<BinOp> <Exp> <Exp>)>
   	Exp.UnOp  = <(<UnOp> <Exp>)>
   	Exp.Lambda = <(lambda (<ID*>) <Exp+>)>

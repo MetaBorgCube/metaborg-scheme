@@ -20,3 +20,7 @@ rules
     mkcur(scope);
   	map[eval-top](exps);
   	exit(int(0))
+  	
+  // For some reason SPT breaks when evaluating a Program AST Node
+  eval(Test(exps)) =
+  	eval(Program(exps))

@@ -4,4 +4,4 @@ language scheme
 
 test parse [[
  (+ 1 1)
-]] parse succeeds
+]] parse to Program([BinOp(Add(), Num("1"), Num("1"))])
