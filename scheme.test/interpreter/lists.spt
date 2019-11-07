@@ -1,0 +1,53 @@
+module lists
+
+language scheme
+
+test car [[
+(test!
+  (define l (cons 1 (cons 12 '())))
+  (car l)					; 1
+)
+]] run dnx-run-spt to "IntV(1)"
+
+test cdr [[
+(test!
+  (define l (cons 1 (cons 12 '())))
+  (car (cdr l))					; 1
+)
+]] run dnx-run-spt to "IntV(12)"
+
+test set-car [[
+(test!
+  (define l (cons 1 (cons 12 '())))
+  (set-car! l 2)			; 1
+  (car l)					; 2					; 1
+)
+]] run dnx-run-spt to "IntV(1)
+IntV(2)"
+
+test set-cdr [[
+(test!
+  (define l (cons 1 (cons 12 '())))
+  (set-car! (cdr l) 42)	; 12
+  (car (cdr l))			; 42
+)
+]] run dnx-run-spt to "IntV(12)
+IntV(42)"
+
+test list smoke test [[
+(test!
+  (define a (cons #f '()))
+  (if (car a) 
+    (set-car! a (lambda (x) (+ x 1)))
+    (set-car! a (lambda (x) 
+  	  (if (>= x 12)
+  		  12
+  		  42
+  	  )
+    ))
+  )
+
+  ((car a) 9)	; 42
+)
+]] run dnx-run-spt to "IntV(0)
+IntV(42)" // Should actually be false IntV(42)

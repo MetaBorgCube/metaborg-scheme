@@ -1,0 +1,43 @@
+module arith
+
+language scheme
+
+test Simple add [[
+(test!
+  (+ 1 2)
+)
+]] run dnx-run-spt to "IntV(3)"
+
+test Add sequence [[
+(test!
+  (+ 1 2)
+  (+ 1 (+ 3 4))
+)
+]] run dnx-run-spt to "IntV(3)
+IntV(8)"
+
+test Compare 1 [[
+(test!
+  (< 1 2)
+  (> 1 2)
+  (<= 1 2)
+  (<= 1 1)
+  (<= 2 1)
+  (>= 1 2)
+  (>= 1 1)
+  (>= 2 1)
+  (= 1 1)
+  (= 2 1)
+  (= 1 2)
+)
+]] run dnx-run-spt to "IntV(1)
+IntV(0)
+IntV(1)
+IntV(1)
+IntV(0)
+IntV(0)
+IntV(1)
+IntV(1)
+IntV(1)
+IntV(0)
+IntV(0)"

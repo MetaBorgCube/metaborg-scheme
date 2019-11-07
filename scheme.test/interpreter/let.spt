@@ -1,0 +1,60 @@
+module let
+
+language scheme
+
+test Let scope exit correct frames [[
+(test!
+  (define y 12)
+
+  (let ((x 30))
+	  13
+	  (+ x y)
+  )
+  y
+
+  (+ 2 (let ((x 13)) 
+  	(+ (set! y 40) x)
+  ))
+
+  y
+)
+]] run dnx-run-spt to "IntV(42)
+IntV(12)
+IntV(27)
+IntV(40)"
+
+test Simple let binding [[
+(test!
+  (define y 12)
+
+  (let ((x 30))
+	  13
+	  (+ x y)
+  )
+)
+]] run dnx-run-spt to "IntV(42)"
+
+test Letstar [[
+(test!
+  (define x 1)
+  (let* ((x (+ x 19))
+  	   (y (+ x 2)))
+  	13
+  	(+ x y)
+  )
+)
+]] run dnx-run-spt to "IntV(42)"
+
+test Shadow [[
+(test!
+  (define x 12)
+
+  (let ((x 30)
+	    (y 12))
+	  13
+	  (+ x 12)
+  )
+  x
+)
+]] run dnx-run-spt to "IntV(42)
+IntV(12)"

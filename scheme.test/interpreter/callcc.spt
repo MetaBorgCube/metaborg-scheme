@@ -1,0 +1,70 @@
+module callcc
+
+language scheme
+
+test callcc global left [[
+(test!
+  (define add-x #f)
+  (define x 6)
+  (+ x (call-with-current-continuation (
+  	lambda (cont) (set! add-x cont) 3)
+  	)
+  )
+  (add-x 10)
+  (set! x 2)
+  (add-x 36)
+)
+]] run dnx-run-spt to "IntV(9)
+IntV(16)
+IntV(6)
+IntV(42)"
+
+test callcc global right [[
+(test!
+  (define add-x #f)
+  (define x 6)
+  (+ (call-with-current-continuation (
+  	lambda (cont) (set! add-x cont) 3)
+  	) x
+  )
+  (add-x 10)
+  (set! x 2)
+  (add-x 36)
+)
+]] run dnx-run-spt to "IntV(9)
+IntV(16)
+IntV(6)
+IntV(38)"
+
+test callcc define [[
+(test!
+  (define x #f)
+  (define y (call-with-current-continuation (lambda (cont) (set! x cont) 2)))
+
+  y
+  (x 3)
+  y
+)
+]] run dnx-run-spt to "IntV(2)
+IntV(3)"
+
+test callcc internal [[
+(test!
+  (+ 1 (call-with-current-continuation
+       (lambda (k)
+         (+ 2 (k 3)))))
+)
+]] run dnx-run-spt to "IntV(4)"
+
+test callcc inside let [[
+(test!
+  (define y 12)
+  (+ 2 (let ((x 13)) 
+	  (+ x (call-with-current-continuation 
+		  (lambda (cont) (set! y cont) 3)
+	  ))
+  ))
+  (y 27)
+)
+]] run dnx-run-spt to "IntV(18)
+IntV(42)"

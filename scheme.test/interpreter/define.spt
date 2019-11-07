@@ -1,0 +1,19 @@
+module define
+
+language scheme
+
+test Multiple defines [[
+(test!
+  (define aa 12)
+  (define bb 13)
+  (define cc 17)
+  (+ cc (+ aa bb))
+)
+]] run dnx-run-spt to "IntV(42)"
+
+test Define function [[
+(test!
+  (define a (lambda (x) (+ x 3)))
+  (a (a 2))
+)
+]] run dnx-run-spt to "IntV(8)"

@@ -1,0 +1,25 @@
+module lambda
+
+language scheme
+
+test Function application argument order [[
+(test!
+  ((lambda (x y z a b c) y) 2 3 4 5 6 7)
+)
+]] run dnx-run-spt to "IntV(3)"
+
+test Lambdas in globals with global [[
+(test!
+  (define x 1)
+  (define func (lambda (y) (+ x y)))
+
+  (func 2)
+)
+]] run dnx-run-spt to "IntV(3)"
+
+test FunkyFuncs [[
+(test!
+  (define a (lambda (y) (+ y 29)))
+  ((set! a 12) 13)
+)
+]] run dnx-run-spt to "IntV(42)"
