@@ -114,39 +114,38 @@ rules
     set(clos, [1], b);
     return(clos)    
     
-    eval-exp(Callcc(func)); k(pop()) = 
+  eval-exp(Callcc(func)); k(pop()) = 
     cc <- curC(k);
-    
-    cc_clos <- new(int(2));
-    clos_b <- <
-    	v <- get(cur(), [0]);
-    	callC(get(cur(), [1]), v)
-    >;
-    
-    df <- new(int(2));
-    link(df, cur(), &P);
-    set(df, [1], cc);
-    
-    set(cc_clos, [0], df);
-    set(cc_clos, [1], clos_b);
-    
+        
     clos <- eval-exp(func);
-    lcf <- newCF(get(clos, [0]));
-    setC(lcf, $ret, cc);
-    df <- unpackCF(lcf);
-    set(df, [0], cc_clos);
-    callCF(lcf, get(clos, [1]))
+    
+    cf <- newCF(get(clos, [0]));
+    setC(cf, $ret, cc);
+    df <- unpackCF(cf);
+    set(df, [0], cc);
+    callCF(cf, get(clos, [1]))
   
   
   eval-exp(FunApp([func | args])); k(pop()) =
+    !closure;
+    call_cont = <
+      arg <- eval-first(~args);
+      callC(~closure, arg)
+    >;
+    call_clos = <
+      cf <- newCF(get(~closure, [0]));
+      setC(cf, $ret, curC(~k));
+      df <- unpackCF(cf);
+      store-arg(zip-with-index(~args), df);
+      callCF(cf, get(~closure, [1]))
+    >;
     closure <- eval-exp(func);
-    lcf <- newCF(get(closure, [0]));
-    setC(lcf, $ret, curC(k));
-    df <- unpackCF(lcf);
-    store-arg(zip-with-index(args), df);
-    callCF(lcf, get(closure, [1]))
+    jumpz(is-frame(closure), call_cont, call_clos)
+    
     
 rules
+   eval-first([first|_]) = eval-exp(first)
+   
    associate-args( (idx, name) ) =
     associate-index(idx, name, "Var")
     
